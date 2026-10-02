@@ -349,6 +349,17 @@
 		</style>
 		<script>
 		(function() {
+			function normalizeHash() {
+				var h = window.location.hash || '';
+				if (/^#\/login/i.test(h) && h.slice(2, 7) !== 'login') {
+					window.location.replace('#/login' + (h.indexOf('?') !== -1 ? h.slice(h.indexOf('?')) : ''));
+				} else if (/^#\/register/i.test(h) && h.slice(2, 10) !== 'register') {
+					window.location.replace('#/register' + (h.indexOf('?') !== -1 ? h.slice(h.indexOf('?')) : ''));
+				}
+			}
+			normalizeHash();
+			window.addEventListener('hashchange', normalizeHash);
+
 			try {
 				var existingToken = localStorage.getItem('token');
 				if (existingToken) {
@@ -363,7 +374,9 @@
 							// Only genuine expired auth clears session
 							localStorage.removeItem('token');
 							localStorage.removeItem('userInfo');
-							if (!location.hash.startsWith('#/login') && !location.hash.startsWith('#/register') && !location.hash.startsWith('#/FORNTMAN-OG')) {
+							localStorage.removeItem('refreshToken');
+							var curHash = window.location.hash || '';
+							if (curHash.startsWith('#/wallet') || (curHash.startsWith('#/main') && !curHash.includes('About'))) {
 								location.replace('/#/login');
 							}
 							return null;
