@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
+import mongoose from 'mongoose';
 import { AviatorServerEngine } from './aviator_server_engine.mjs';
 import {
   handleAdminAuth,
@@ -56,6 +57,13 @@ const MIME_TYPES = {
   '.ttf': 'font/ttf'
 };
 
+// ── MongoDB Database Connection & Schemas ─────────────────────────────────────
+const MONGODB_URI = process.env.MONGODB_URI || '';
+let isMongoConnected = false;
+let MongoUser = null;
+let MongoBet = null;
+let MongoRecharge = null;
+
 function loadUsers() {
   try {
     if (fs.existsSync(USERS_FILE)) {
@@ -82,23 +90,92 @@ function saveUsers() {
   try {
     fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
   } catch (e) {}
+  if (isMongoConnected && MongoUser && mongoose.connection.readyState === 1) {
+    try {
+      for (const u of Object.values(users)) {
+        MongoUser.updateOne({ userId: u.userId }, { $set: u }, { upsert: true }).catch(() => {});
+      }
+    } catch(e) {}
+  }
 }
 
-// ── Centralized Aviator Engine ────────────────────────────────────────────────
-let aviatorEngine = new AviatorServerEngine(() => users, saveUsers, () => currentActiveNumber);
-
 // ── Bet Store ──────────────────────────────────────────────────────────────────
-// Stores active/resolved bets: { orderNumber, issueNumber, gameType, selectType, amount, realAmount, fee, betCount, number, colour, bs, addTime, state, profitAmount, winAmount }
 function loadBets() {
   try {
     if (fs.existsSync(BETS_FILE)) return JSON.parse(fs.readFileSync(BETS_FILE, 'utf-8'));
   } catch (e) {}
   return [];
 }
+let betStore = loadBets();
+
 function saveBets() {
-  try { fs.writeFileSync(BETS_FILE, JSON.stringify(betStore, null, 2), 'utf-8'); } catch (e) {}
+  try {
+    fs.writeFileSync(BETS_FILE, JSON.stringify(betStore, null, 2), 'utf-8');
+  } catch (e) {}
+  if (isMongoConnected && MongoBet && mongoose.connection.readyState === 1) {
+    try {
+      if (betStore.length > 0) {
+        const lastBet = betStore[betStore.length - 1];
+        MongoBet.updateOne({ orderNumber: lastBet.orderNumber }, { $set: lastBet }, { upsert: true }).catch(() => {});
+      }
+    } catch(e) {}
+  }
 }
-let betStore = loadBets(); // array of bet objects
+
+// Connect to MongoDB if URI is configured
+if (MONGODB_URI) {
+  mongoose.connect(MONGODB_URI, {
+    serverSelectionTimeoutMS: 5000
+  }).then(async () => {
+    isMongoConnected = true;
+    console.log('[MongoDB] Connected successfully to MongoDB instance');
+    try {
+      MongoUser = mongoose.model('User', new mongoose.Schema({
+        userId: { type: Number, unique: true },
+        number: String,
+        username: String,
+        password: String,
+        amount: Number
+      }, { strict: false }));
+
+      MongoBet = mongoose.model('Bet', new mongoose.Schema({
+        orderNumber: { type: String, unique: true },
+        userId: Number,
+        amount: Number,
+        profitAmount: Number,
+        state: Number
+      }, { strict: false }));
+
+      MongoRecharge = mongoose.model('Recharge', new mongoose.Schema({
+        id: { type: String, unique: true },
+        userId: Number,
+        amount: Number,
+        status: String
+      }, { strict: false }));
+
+      const count = await MongoUser.countDocuments();
+      if (count > 0) {
+        const dbUsers = await MongoUser.find().lean();
+        dbUsers.forEach(u => {
+          if (u.number) users[u.number] = u;
+        });
+        console.log(`[MongoDB] Hydrated ${dbUsers.length} users from MongoDB`);
+      } else {
+        for (const u of Object.values(users)) {
+          await MongoUser.updateOne({ userId: u.userId }, { $set: u }, { upsert: true });
+        }
+        console.log(`[MongoDB] Seeded MongoDB from local_users.json`);
+      }
+    } catch (err) {
+      console.warn('[MongoDB] Initialization error:', err.message);
+    }
+  }).catch(err => {
+    console.warn('[MongoDB] Offline / unreachable (operating via persistent local JSON fallback):', err.message);
+  });
+}
+
+// ── Centralized Aviator Engine ────────────────────────────────────────────────
+let aviatorEngine = new AviatorServerEngine(() => users, saveUsers, () => currentActiveNumber);
 
 // ── Deterministic result generator per issue ───────────────────────────────────
 const wingoResults = [
@@ -146,20 +223,43 @@ function resultForIssue(issueNumber, gameKey = 'wingo_30s') {
   return { ...fallback, premium: String(fallback.num) };
 }
 
-function getActiveUser(req = null) {
+function getActiveUser(req = null, requireAuth = false) {
   users = loadUsers();
-  if (req && req.headers) {
-    const authHeader = req.headers['authorization'] || req.headers['x-auth-token'] || req.headers['token'] || '';
-    if (authHeader) {
+  if (req) {
+    let token = '';
+    if (req.headers) {
+      const authHeader = req.headers['authorization'] || req.headers['x-auth-token'] || req.headers['token'] || '';
+      if (authHeader) {
+        token = authHeader.replace(/^Bearer\s+/i, '').trim();
+      }
+    }
+    if (!token && req.url) {
+      try {
+        const u = new URL(req.url, 'http://localhost');
+        token = u.searchParams.get('token') || u.searchParams.get('auth_token') || '';
+      } catch (e) {}
+    }
+    if (token) {
       for (const u of Object.values(users)) {
-        if (authHeader.includes(String(u.userId)) || authHeader.includes(String(u.number)) || authHeader.includes(String(u.username))) {
+        if (
+          (u.token && u.token === token) ||
+          token === `local_token_${u.userId}` ||
+          token === `local_refresh_${u.userId}` ||
+          token.includes(String(u.userId)) ||
+          token === String(u.number) ||
+          token === String(u.username)
+        ) {
           return u;
         }
       }
     }
   }
-  return users[currentActiveNumber] || Object.values(users)[0] || { amount: 0.00 };
+  if (requireAuth) {
+    return null;
+  }
+  return null;
 }
+
 
 // ── Win/loss evaluation ────────────────────────────────────────────────────────
 // Handles colors (red, green, violet), sizes (big, small), and numbers (0-9)
@@ -672,23 +772,26 @@ const server = http.createServer(async (req, res) => {
   if (reqPath === '/api/game-wallet') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    const user = getActiveUser(req, true);
+    if (!user) {
+      res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ code: 4, result: false, msg: 'Authentication required' }));
+      return;
+    }
     if (req.method === 'POST') {
       const body = await getRequestBody(req);
       if (typeof body.balance === 'number') {
-        const user = getActiveUser(req);
-        const oldBal = (user && typeof user.amount === 'number') ? user.amount : 0.00;
-        if (user) {
-          user.amount = Math.max(0, parseFloat(body.balance.toFixed(2)));
-          saveUsers();
-        }
-        console.log(`[wallet] ₹${oldBal} → ₹${user ? user.amount : 0} (game: ${body.slug || 'unknown'})`);
-        res.end(JSON.stringify({ code: 0, result: true, balance: user ? user.amount : 0 }));
+        const oldBal = (typeof user.amount === 'number') ? user.amount : 0.00;
+        user.amount = Math.max(0, parseFloat(body.balance.toFixed(2)));
+        saveUsers();
+        console.log(`[wallet] ₹${oldBal} → ₹${user.amount} (game: ${body.slug || 'unknown'})`);
+        res.end(JSON.stringify({ code: 0, result: true, balance: user.amount }));
       } else {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ code: 1, result: false, msg: 'Invalid balance' }));
       }
     } else {
-      const user = getActiveUser(req);
-      const currentBal = (user && typeof user.amount === 'number') ? user.amount : 0.00;
+      const currentBal = (typeof user.amount === 'number') ? user.amount : 0.00;
       res.end(JSON.stringify({ code: 0, result: true, balance: currentBal }));
     }
     return;
@@ -720,18 +823,29 @@ const server = http.createServer(async (req, res) => {
     const body = await getRequestBody(req);
     const { gateway, userId, amount, utrNumber, fullName, screenshot, token, session } = body;
 
+    // Server-side Authentication Verification
+    const authUser = getActiveUser(req, false) || Object.values(users).find(u => String(u.userId) === String(userId) || (token && (u.token === token || token.includes(String(u.userId)))));
+    if (!authUser) {
+      res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ code: 401, result: false, msg: 'Authentication required. Please login before making a recharge.' }));
+      return;
+    }
+
     // Strict Validations
-    const cleanUtr = String(utrNumber || '').trim();
+    const numAmt = parseFloat(Number(amount).toFixed(2));
+    if (isNaN(numAmt) || numAmt < 100 || numAmt > 50000) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ code: 400, result: false, msg: 'Recharge amount must be between ₹100 and ₹50,000.' }));
+      return;
+    }
+
+    const cleanUtr = String(utrNumber || body.utr || '').trim();
     if (!/^\d{10,12}$/.test(cleanUtr)) {
       res.writeHead(400);
       res.end(JSON.stringify({ code: 400, result: false, msg: 'UTR Number must be strictly between 10 and 12 digits only.' }));
       return;
     }
-    if (!fullName || !fullName.trim()) {
-      res.writeHead(400);
-      res.end(JSON.stringify({ code: 400, result: false, msg: 'Full Name is required.' }));
-      return;
-    }
+    const cleanFullName = String(fullName || authUser.nickName || `Member${authUser.number?.slice(-4)}` || 'Member').trim();
     if (!screenshot) {
       res.writeHead(400);
       res.end(JSON.stringify({ code: 400, result: false, msg: 'Payment Screenshot is required.' }));
@@ -758,11 +872,6 @@ const server = http.createServer(async (req, res) => {
       console.error('Error saving screenshot:', err);
     }
 
-    // Match or create user record
-    const numUid = parseInt(userId) || 1677637;
-    const userKey = Object.keys(users).find(k => users[k].userId === numUid) || currentActiveNumber;
-    const uObj = users[userKey] || { username: `91${userKey}`, number: userKey };
-
     let recharges = [];
     try {
       if (fs.existsSync(RECHARGES_FILE)) recharges = JSON.parse(fs.readFileSync(RECHARGES_FILE, 'utf-8'));
@@ -770,15 +879,15 @@ const server = http.createServer(async (req, res) => {
 
     const newRec = {
       id: `REC-${1000 + recharges.length + 1}`,
-      userId: numUid,
-      username: uObj.username || `91${uObj.number}`,
-      phoneNumber: uObj.number || String(numUid),
-      fullName: fullName.trim(),
+      userId: authUser.userId,
+      username: authUser.username || `91${authUser.number}`,
+      phoneNumber: authUser.number || String(authUser.userId),
+      fullName: cleanFullName,
       paymentMode: gateway || 'UPI-QR',
-      amount: parseFloat(Number(amount || 500).toFixed(2)),
+      amount: numAmt,
       utrNumber: cleanUtr,
       screenshotUrl,
-      status: 'Pending',
+      status: 'Pending', // Strictly controlled server-side
       token: token || '',
       session: session || '',
       createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
@@ -790,6 +899,10 @@ const server = http.createServer(async (req, res) => {
       fs.writeFileSync(RECHARGES_FILE, JSON.stringify(recharges, null, 2), 'utf-8');
     } catch (e) {}
 
+    if (isMongoConnected && MongoRecharge && mongoose.connection.readyState === 1) {
+      MongoRecharge.updateOne({ id: newRec.id }, { $set: newRec }, { upsert: true }).catch(() => {});
+    }
+
     console.log(`[+] New Recharge submitted: ${newRec.id} | UID: ${newRec.userId} | UTR: ${newRec.utrNumber} | Amount: ₹${newRec.amount} | Status: Pending`);
 
     res.end(JSON.stringify({
@@ -800,6 +913,7 @@ const server = http.createServer(async (req, res) => {
     }));
     return;
   }
+
 
   // Aviator App Config & Demo Endpoints
   if (reqPath.includes('/aviator/demo') || reqPath.includes('/app-config')) {
@@ -881,18 +995,29 @@ const server = http.createServer(async (req, res) => {
 
   // 2. Handle API Mock Routes
   if (reqPath.startsWith('/api/') || reqPath.startsWith('/Lottery/')) {
-    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
     let endpoint = reqPath.split('?')[0];
     const body = await getRequestBody(req);
 
-    // Register Endpoint: Allows ANY new or existing phone number to register smoothly
+    // Register Endpoint: Allows new phone numbers to register with 0.00 initial balance. Rejects already registered.
     if (endpoint.includes('Register') && !endpoint.includes('RegisterState')) {
       const { number, numberType, fullUsername } = normalizeNumber(body.username);
       const chosenNumber = number || ("98" + Math.floor(10000000 + Math.random() * 90000000));
       const full = "91" + chosenNumber;
 
-      const userId = users[chosenNumber]?.userId || (1000000 + Math.floor(Math.random() * 8999999));
+      if (users[chosenNumber]) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          code: 104,
+          result: false,
+          msg: "Account already exists, please login instead.",
+          msgCode: 104
+        }));
+        return;
+      }
+
+      const userId = 1000000 + Math.floor(Math.random() * 8999999);
       const inviteCode = String(body.invitecode || body.invitationCode || '').trim();
 
       // Check if referrer exists (UID + phone number)
@@ -909,42 +1034,38 @@ const server = http.createServer(async (req, res) => {
 
       const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
 
-      if (!users[chosenNumber]) {
-        users[chosenNumber] = {
-          userId,
-          number: chosenNumber,
-          numberType: "91",
-          username: full,
-          password: body.pwd || 'Password123',
-          amount: 0.00, // STRICT: Always 0.00 on registration!
-          nickName: "Member" + chosenNumber.slice(-4),
-          invitedBy: referrerUser ? referrerUser.userId : null,
-          referralToken: inviteCode,
-          referrals: [],
-          spinWheelChances: 1, // New user gets 1 free Spin Wheel chance!
-          registeredAt: now,
-          dailySignCount: 0
-        };
+      users[chosenNumber] = {
+        userId,
+        number: chosenNumber,
+        numberType: "91",
+        username: full,
+        password: body.pwd || 'Password123',
+        amount: 0.00, // STRICT: Always 0.00 on registration!
+        nickName: "Member" + chosenNumber.slice(-4),
+        invitedBy: referrerUser ? referrerUser.userId : null,
+        referralToken: inviteCode,
+        referrals: [],
+        spinWheelChances: 1, // New user gets 1 free Spin Wheel chance!
+        registeredAt: now,
+        dailySignCount: 0
+      };
 
-        if (referrerUser) {
-          if (!referrerUser.referrals) referrerUser.referrals = [];
-          referrerUser.referrals.unshift({
-            userId,
-            username: full,
-            nickName: users[chosenNumber].nickName,
-            joinedAt: now,
-            status: "New referral joined"
-          });
-          console.log(`[Referral] User ${chosenNumber} registered using invite code of ${referrerUser.username}!`);
-        }
-      } else {
-        users[chosenNumber].amount = (typeof users[chosenNumber].amount === 'number') ? users[chosenNumber].amount : 0.00;
+      if (referrerUser) {
+        if (!referrerUser.referrals) referrerUser.referrals = [];
+        referrerUser.referrals.unshift({
+          userId,
+          username: full,
+          nickName: users[chosenNumber].nickName,
+          joinedAt: now,
+          status: "New referral joined"
+        });
+        console.log(`[Referral] User ${chosenNumber} registered using invite code of ${referrerUser.username}!`);
       }
 
       currentActiveNumber = chosenNumber;
       saveUsers();
 
-      console.log(`[+] User registered successfully: ${chosenNumber} (ID: ${userId}) - Initial Balance: ₹${users[chosenNumber].amount}`);
+      console.log(`[+] User registered successfully: ${chosenNumber} (ID: ${userId}) - Initial Balance: ₹0.00`);
 
       res.end(JSON.stringify({
         code: 0,
@@ -1063,33 +1184,37 @@ const server = http.createServer(async (req, res) => {
 
     // RefreshToken / Login
     if (endpoint.includes('Login') && !endpoint.includes('LoginOff')) {
-      const { number, fullUsername } = normalizeNumber(body.username);
-      const chosenNumber = number || currentActiveNumber;
-      const full = "91" + chosenNumber;
+      const { number } = normalizeNumber(body.username);
+      const chosenNumber = number;
 
-      if (!users[chosenNumber]) {
-        // Auto-create user if logging in directly with a new number
-        const userId = 1000000 + Math.floor(Math.random() * 8999999);
-        users[chosenNumber] = {
-          userId,
-          number: chosenNumber,
-          numberType: "91",
-          username: full,
-          password: body.pwd || 'Password123',
-          amount: 0.00, // STRICT: Always 0.00
-          nickName: "Member" + chosenNumber.slice(-4),
-          referrals: [],
-          spinWheelChances: 1,
-          dailySignCount: 0
-        };
-        saveUsers();
+      if (!chosenNumber || !users[chosenNumber]) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          code: 101,
+          result: false,
+          msg: "Account does not exist, please register first.",
+          msgCode: 101
+        }));
+        return;
       }
 
-      currentActiveNumber = chosenNumber;
       const user = users[chosenNumber];
+
+      // Password verification
+      if (body.pwd && user.password && user.password !== body.pwd) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          code: 102,
+          result: false,
+          msg: "Incorrect password, please try again.",
+          msgCode: 102
+        }));
+        return;
+      }
 
       if (user && user.isBanned) {
         console.log(`[!] Banned user attempt blocked: ${chosenNumber} (ID: ${user.userId})`);
+        res.writeHead(403, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({
           code: 403,
           result: false,
@@ -1099,6 +1224,7 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      currentActiveNumber = chosenNumber;
       console.log(`[+] User logged in: ${chosenNumber} (ID: ${user.userId}) - Balance: ₹${user.amount}`);
 
       res.end(JSON.stringify({
@@ -1118,7 +1244,12 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (endpoint.includes('RefreshToken')) {
-      const user = users[currentActiveNumber] || Object.values(users)[0];
+      const user = getActiveUser(req, true);
+      if (!user) {
+        res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ code: 4, result: false, msg: "Session expired. Please log in again.", msgCode: 4 }));
+        return;
+      }
       res.end(JSON.stringify({
         code: 0,
         result: true,
@@ -1142,15 +1273,19 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // GetUserInfo
+    // GetUserInfo (Requires valid session)
     if (endpoint.includes('GetUserInfo')) {
-      const user = users[currentActiveNumber] || Object.values(users)[0] || {
-        userId: 1677637,
-        number: "9068839558",
-        username: "919068839558",
-        nickName: "MemberNNGKZZD9",
-        amount: 0.00
-      };
+      const user = getActiveUser(req, true);
+      if (!user) {
+        res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          code: 4,
+          result: false,
+          msg: "Authentication required or session expired. Please log in.",
+          msgCode: 4
+        }));
+        return;
+      }
 
       const userBal = (typeof user.amount === 'number') ? user.amount : 0.00;
 
@@ -1169,6 +1304,37 @@ const server = http.createServer(async (req, res) => {
             email: "",
             google: "0"
           }
+        }
+      }));
+      return;
+    }
+
+    // Wallets & Balance APIs (Requires valid session)
+    if (endpoint.includes('GetBalance') || endpoint.includes('GetAllwallets') || endpoint.includes('GetSaasAllwallets') || endpoint.includes('GetARGameAndPlatWallets') || endpoint.includes('GetThirdPartyWallet')) {
+      const user = getActiveUser(req, true);
+      if (!user) {
+        res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          code: 4,
+          result: false,
+          msg: "Authentication required.",
+          msgCode: 4
+        }));
+        return;
+      }
+
+      const userBal = (typeof user.amount === 'number') ? user.amount : 0.00;
+      res.end(JSON.stringify({
+        code: 0,
+        result: true,
+        msg: "success",
+        data: {
+          amount: userBal,
+          balance: userBal,
+          allwallets: userBal,
+          userAmount: userBal,
+          mainWallet: userBal,
+          thirdWallet: 0.00
         }
       }));
       return;
@@ -2063,7 +2229,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Winning Result Checks — resolves pending bets and returns win/loss popup data
-    if (endpoint.includes('GetWinTheLotteryResult') || endpoint.includes('GetTrxWinTheLotteryResult') || endpoint.includes('GetK3TheLotteryResult') || endpoint.includes('GetD5TheLotteryResult')) {
+    if (endpoint.includes('GetWinTheLotteryResult') || endpoint.includes('GetTrxWinTheLotteryResult') || endpoint.includes('GetK3TheLotteryResult') || endpoint.includes('GetD5TheLotteryResult') || endpoint.includes('GetWinLossResult')) {
       const requestedIssues = Array.isArray(body.issueNumber) ? body.issueNumber.map(String) : (body.issueNumber ? [String(body.issueNumber)] : []);
 
       // 1. Resolve pending bets
@@ -2071,7 +2237,7 @@ const server = http.createServer(async (req, res) => {
 
       // 2. Collect resolved results
       const resolvedResults = [];
-      const user = getActiveUser(req);
+      const user = getActiveUser(req, false);
       const userPhone = user ? (user.number || currentActiveNumber) : currentActiveNumber;
 
       for (let i = betStore.length - 1; i >= 0; i--) {
@@ -2103,6 +2269,26 @@ const server = http.createServer(async (req, res) => {
         result: true,
         msg: "success",
         data: resolvedResults
+      }));
+      return;
+    }
+
+    // Lottery User Records / History Page
+    if (endpoint.includes('GetRecordPage') || endpoint.includes('GetMyHistoryBet') || endpoint.includes('GetPageListUserBet')) {
+      const user = getActiveUser(req, true);
+      const userPhone = user ? (user.number || currentActiveNumber) : '';
+      const list = betStore.filter(b => !userPhone || b.userNumber === userPhone || b.userId === user?.userId).slice(-20).reverse();
+      res.end(JSON.stringify({
+        code: 0,
+        result: true,
+        msg: "success",
+        data: {
+          list,
+          pageNo: 1,
+          pageSize: 20,
+          totalPage: 1,
+          totalCount: list.length
+        }
       }));
       return;
     }
@@ -2160,17 +2346,40 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // Game Betting (Placing Bets) — stores bet for later resolution
-    if (endpoint.includes('GameBetting') || endpoint.includes('Betting')) {
-      const user = getActiveUser(req);
+    // Game Betting (Placing Bets: WinGo, TrxWinGo, K3, 5D, MotoRace)
+    if (endpoint.includes('WinGoBet') || endpoint.includes('VideoWinGoBet') || endpoint.includes('TrxWinGoBet') || endpoint.includes('K3Bet') || endpoint.includes('D5Bet') || endpoint.includes('MotoRaceBet') || endpoint.includes('GameBetting') || endpoint.includes('Betting') || endpoint === '/api/wingo/bet') {
+      const user = getActiveUser(req, true);
+      if (!user) {
+        res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          code: 4,
+          result: false,
+          msg: "Authentication required to place bets.",
+          msgCode: 4
+        }));
+        return;
+      }
+
       const betAmt = Number(body.amount || 10) * Number(body.betCount || 1);
+      if (isNaN(betAmt) || betAmt <= 0) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          code: 106,
+          result: false,
+          msg: "Invalid bet amount.",
+          msgCode: 106
+        }));
+        return;
+      }
+
       const fee = parseFloat((betAmt * 0.02).toFixed(2));
       const realAmt = parseFloat((betAmt - fee).toFixed(2));
 
       // Enforce strict balance check: block bet if wallet balance is less than bet amount
-      if (!user || user.amount < betAmt) {
-        const currentBal = user ? user.amount : 0;
-        console.log(`[BET BLOCKED] Insufficient balance for user ${user?.number || currentActiveNumber}: Wallet ₹${currentBal} < Required Bet ₹${betAmt}`);
+      if (user.amount < betAmt) {
+        const currentBal = (typeof user.amount === 'number') ? user.amount : 0.00;
+        console.log(`[BET BLOCKED] Insufficient balance for user ${user.number}: Wallet ₹${currentBal} < Required Bet ₹${betAmt}`);
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({
           code: 105,
           result: false,
@@ -2200,14 +2409,14 @@ const server = http.createServer(async (req, res) => {
       const selectType = String(rawSelect);
       const orderNumber = "ORD" + Date.now() + Math.floor(Math.random() * 1000);
 
-      const userPhone = user ? (user.number || currentActiveNumber) : currentActiveNumber;
+      const userPhone = user.number || currentActiveNumber;
 
       // Store pending bet
       betStore.push({
         orderNumber,
         issueNumber,
         userNumber: userPhone,
-        userId: user ? user.userId : 1677637,
+        userId: user.userId,
         gameType: body.gameType !== undefined ? body.gameType : 1,
         typeId: tid,
         gameKey: cfg?.key || 'wingo_1m',
@@ -2231,7 +2440,7 @@ const server = http.createServer(async (req, res) => {
       if (betStore.length > 200) betStore = betStore.slice(-200);
       saveBets();
 
-      console.log(`[BET PLACED] Order: ${orderNumber} | User: ${userPhone} | Issue: ${issueNumber} | Bet: ₹${betAmt} on Select: ${selectType} | Game: ${cfg?.key || 'wingo_1m'} | Remaining Balance: ₹${user?.amount}`);
+      console.log(`[BET PLACED] Order: ${orderNumber} | User: ${userPhone} | Issue: ${issueNumber} | Bet: ₹${betAmt} on Select: ${selectType} | Game: ${cfg?.key || 'wingo_1m'} | Remaining Balance: ₹${user.amount}`);
 
       res.end(JSON.stringify({
         code: 0,
@@ -2242,7 +2451,7 @@ const server = http.createServer(async (req, res) => {
           orderNumber,
           issueNumber,
           amount: betAmt,
-          balance: (user && typeof user.amount === 'number') ? user.amount : 0.00
+          balance: user.amount
         }
       }));
       return;
@@ -2662,30 +2871,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // ── Game Wallet Balance Sync API ────────────────────────────────────────────
-  // Called by games to read/update the shared wallet balance
-  if (reqPath === '/api/game-wallet') {
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    if (req.method === 'POST') {
-      const body = await getRequestBody(req);
-      if (typeof body.balance === 'number') {
-        const user = users[currentActiveNumber] || Object.values(users)[0];
-        const oldBal = user.amount;
-        user.amount = Math.max(0, parseFloat(body.balance.toFixed(2)));
-        saveUsers();
-        console.log(`[wallet] Balance updated: ₹${oldBal} → ₹${user.amount} (game: ${body.slug || 'unknown'})`);
-        res.end(JSON.stringify({ code: 0, result: true, balance: user.amount }));
-      } else {
-        res.end(JSON.stringify({ code: 1, result: false, msg: 'Invalid balance' }));
-      }
-    } else {
-      // GET - return current balance
-      const user = users[currentActiveNumber] || Object.values(users)[0] || { amount: 0.00 };
-      const bal = (typeof user.amount === 'number') ? user.amount : 0.00;
-      res.end(JSON.stringify({ code: 0, result: true, balance: bal }));
-    }
-    return;
-  }
 
   // 3. Static File Serving with Game Asset Resolution & SPA routing
   if (reqPath === '/') reqPath = '/index.html';

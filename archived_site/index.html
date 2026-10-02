@@ -128,27 +128,64 @@
 				return bal;
 			}
 
-			// â”€â”€ 2. Sync balance back when user returns from a game â”€
+			// ── 2. Sync balance back when user returns from a game or switches view ─
 			function syncBalanceFromGame() {
+				var token = localStorage.getItem('token');
+				if (!token) return;
+
+				// If an internal game updated local game wallet, sync it to server
 				try {
 					var raw = localStorage.getItem(WALLET_KEY);
-					if (!raw) return;
-					var data = JSON.parse(raw);
-					// Only sync if the game wallet was touched within last 4 hours
-					if (!data || Date.now() - data.time > 4 * 3600 * 1000) return;
-					var gameBalance = parseFloat(data.balance);
-					if (!isNaN(gameBalance) && gameBalance >= 0) {
-						setMainBalance(gameBalance);
-						// Notify UI to refresh balance display
-						setTimeout(function() {
-							var ev = new CustomEvent('balanceUpdated', { detail: { amount: gameBalance } });
-							window.dispatchEvent(ev);
-						}, 300);
+					if (raw) {
+						var data = JSON.parse(raw);
+						if (data && Date.now() - data.time < 30000 && typeof data.balance === 'number') {
+							fetch('/api/game-wallet', {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+									'Authorization': (localStorage.getItem('tokenHeader') || 'Bearer ') + token
+								},
+								body: JSON.stringify({ balance: data.balance, slug: data.slug })
+							}).catch(function() {});
+						}
 					}
 				} catch (e) {}
+
+				// Fetch authoritative current balance directly from backend
+				fetch('/api/webapi/GetUserInfo', {
+					headers: {
+						'Authorization': (localStorage.getItem('tokenHeader') || 'Bearer ') + token
+					}
+				})
+				.then(function(res) {
+					if (res.status === 401) {
+						// Only genuine expired auth clears session
+						localStorage.removeItem('token');
+						localStorage.removeItem('userInfo');
+						if (!location.hash.startsWith('#/login') && !location.hash.startsWith('#/register') && !location.hash.startsWith('#/FORNTMAN-OG')) {
+							location.replace('/#/login');
+						}
+						return null;
+					}
+					if (res.ok) return res.json();
+					return null;
+				})
+				.then(function(res) {
+					if (!res || !res.data) return;
+					var user = res.data;
+					var bal = parseFloat(user.amount !== undefined ? user.amount : user.balance);
+					if (!isNaN(bal) && bal >= 0) {
+						setMainBalance(bal);
+						var ev = new CustomEvent('balanceUpdated', { detail: { amount: bal } });
+						window.dispatchEvent(ev);
+					}
+				})
+				.catch(function(err) {
+					console.warn('Balance sync network warning', err);
+				});
 			}
 
-			// When user comes back to main app tab from a game
+			// When user comes back to main app tab or navigates
 			document.addEventListener('visibilitychange', function() {
 				if (!document.hidden) {
 					syncBalanceFromGame();
@@ -158,7 +195,12 @@
 				syncBalanceFromGame();
 			});
 			window.addEventListener('pageshow', function(e) {
-				if (e.persisted) syncBalanceFromGame();
+				syncBalanceFromGame();
+			});
+			window.addEventListener('hashchange', function() {
+				if (window.location.hash.startsWith('#/main') || window.location.hash.startsWith('#/wallet')) {
+					syncBalanceFromGame();
+				}
 			});
 
 			// â”€â”€ 3. Game map for navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -308,29 +350,40 @@
 		<script>
 		(function() {
 			try {
-				if (localStorage.getItem('token') === 'local_token_1677637') {
-					localStorage.removeItem('token');
-					localStorage.removeItem('userInfo');
-				}
-				var ws = localStorage.getItem('walletStore');
-				if (ws) {
-					try {
-						var parsedWs = JSON.parse(ws);
-						if (parsedWs.amount === 1250) {
-							parsedWs.amount = 0.00;
-							localStorage.setItem('walletStore', JSON.stringify(parsedWs));
+				var existingToken = localStorage.getItem('token');
+				if (existingToken) {
+					// Verify session with server on startup
+					fetch('/api/webapi/GetUserInfo', {
+						headers: {
+							'Authorization': (localStorage.getItem('tokenHeader') || 'Bearer ') + existingToken
 						}
-					} catch(e){}
-				}
-				var ui = localStorage.getItem('userInfo');
-				if (ui) {
-					try {
-						var parsedUi = JSON.parse(ui);
-						if (parsedUi.amount === 1250) {
-							parsedUi.amount = 0.00;
-							localStorage.setItem('userInfo', JSON.stringify(parsedUi));
+					})
+					.then(function(res) {
+						if (res.status === 401) {
+							// Only genuine expired auth clears session
+							localStorage.removeItem('token');
+							localStorage.removeItem('userInfo');
+							if (!location.hash.startsWith('#/login') && !location.hash.startsWith('#/register') && !location.hash.startsWith('#/FORNTMAN-OG')) {
+								location.replace('/#/login');
+							}
+							return null;
 						}
-					} catch(e){}
+						if (res.ok) return res.json();
+						return null;
+					})
+					.then(function(json) {
+						if (json && json.data) {
+							var u = json.data;
+							var currentBal = typeof u.amount === 'number' ? u.amount : parseFloat(u.amount || 0);
+							if (!isNaN(currentBal)) {
+								setMainBalance(currentBal);
+							}
+						}
+					})
+					.catch(function(err) {
+						// Network errors must NOT logout the user
+						console.warn('Session startup verification:', err);
+					});
 				}
 
 				const defaults = {
@@ -457,116 +510,87 @@
 		<style>
 		.event-rewards-login-dialog, .activity-task-dialog, .daily-tasks-dialog, .task-dialog, .van-dialog--task, [class*="task-dialog"], [class*="DailyTask"] { display: none !important; }
 		</style>
-		<!-- Recharge Interceptor & 4 Separate UPI Gateway Selector -->
+		<!-- Seamless Gateway Router (Preserves Native 4-Card UI, Direct Redirection) -->
 		<script>
 		(function() {
 			if (window.__IS_FORNTMAN_ADMIN__) return;
 
-			function openGatewaySelector(amount) {
-				amount = amount || 500;
-				var existing = document.getElementById('gateway-selector-modal');
-				if (existing) existing.remove();
+			var GATEWAY_ROUTES = [
+				'/upi-qr',      // 0: UPI-QR
+				'/upixqr',      // 1: UPI x QR
+				'/wallet-qr',   // 2: E-Wallet
+				'/paytmqr'      // 3: Paytm x QR
+			];
 
+			function getSelectedAmount() {
+				var amt = 500;
+				try {
+					var activePreset = document.querySelector('.Recharge__content-paymoney__money-list__item.active, [class*="money-list__item"].active, [class*="money_item"].active');
+					if (activePreset) {
+						var text = activePreset.textContent || '';
+						var m = text.match(/(\d+)/);
+						if (m && Number(m[1]) >= 100) amt = Number(m[1]);
+					}
+					var inputEl = document.querySelector('.Recharge__content-paymoney__money-input input, .amount-input input, input[placeholder*="amount" i]');
+					if (inputEl && inputEl.value && Number(inputEl.value) >= 100) {
+						amt = Number(inputEl.value);
+					}
+				} catch(e) {}
+				return amt;
+			}
+
+			function redirectToGateway(gatewayIndex) {
 				var user = {};
 				try {
 					user = JSON.parse(localStorage.getItem('userInfo') || '{}');
 				} catch(e){}
 				var uid = user.userId || '1677637';
-
-				var token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+				var token = localStorage.getItem('token') || '';
 				var session = 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+				var amount = getSelectedAmount();
+				var route = GATEWAY_ROUTES[gatewayIndex] || '/upi-qr';
 
-				var modal = document.createElement('div');
-				modal.id = 'gateway-selector-modal';
-				modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);z-index:999999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
-				
-				modal.innerHTML = `
-					<div style="background:#131a2a;border:1px solid rgba(255,255,255,0.12);border-radius:24px;width:100%;max-width:420px;padding:24px;box-shadow:0 24px 60px rgba(0,0,0,0.6);color:#fff;animation:popIn 0.3s cubic-bezier(0.16,1,0.3,1);">
-						<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-							<div>
-								<h3 style="margin:0;font-size:18px;font-weight:700;color:#fff;">Select Payment Gateway</h3>
-								<div style="font-size:13px;color:#94a3b8;margin-top:2px;">Recharge Amount: <b style="color:#10b981;font-size:15px;">₹\${amount}</b></div>
-							</div>
-							<button id="close-gw-modal" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;">&times;</button>
-						</div>
-
-						<div style="display:flex;flex-direction:column;gap:12px;">
-							<div class="gw-opt" data-route="/upi-qr" style="display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(16,185,129,0.12),rgba(5,150,105,0.04));border:1px solid rgba(16,185,129,0.3);padding:14px 16px;border-radius:16px;cursor:pointer;transition:all 0.2s;">
-								<div style="width:40px;height:40px;border-radius:12px;background:#10b981;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;font-size:16px;">UPI</div>
-								<div style="flex:1;">
-									<div style="font-weight:700;font-size:15px;color:#fff;">BHIM / Instant UPI</div>
-									<div style="font-size:12px;color:#10b981;">Official NPCI Fast Settlement</div>
-								</div>
-								<span style="color:#94a3b8;font-size:18px;">&rarr;</span>
-							</div>
-
-							<div class="gw-opt" data-route="/upixqr" style="display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(168,85,247,0.12),rgba(6,182,212,0.04));border:1px solid rgba(168,85,247,0.3);padding:14px 16px;border-radius:16px;cursor:pointer;transition:all 0.2s;">
-								<div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#a855f7,#06b6d4);display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;font-size:13px;">UPI-X</div>
-								<div style="flex:1;">
-									<div style="font-weight:700;font-size:15px;color:#fff;">UPI-X Neo Gateway</div>
-									<div style="font-size:12px;color:#a855f7;">High-Speed Laser Route</div>
-								</div>
-								<span style="color:#94a3b8;font-size:18px;">&rarr;</span>
-							</div>
-
-							<div class="gw-opt" data-route="/wallet-qr" style="display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(16,185,129,0.12),rgba(245,158,11,0.04));border:1px solid rgba(16,185,129,0.3);padding:14px 16px;border-radius:16px;cursor:pointer;transition:all 0.2s;">
-								<div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#059669,#10b981);display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;font-size:16px;">₹</div>
-								<div style="flex:1;">
-									<div style="font-weight:700;font-size:15px;color:#fff;">FinTech Wallet QR</div>
-									<div style="font-size:12px;color:#34d399;">VIP Emerald Priority Channel</div>
-								</div>
-								<span style="color:#94a3b8;font-size:18px;">&rarr;</span>
-							</div>
-
-							<div class="gw-opt" data-route="/paytmqr" style="display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(0,186,242,0.12),rgba(0,41,112,0.1));border:1px solid rgba(0,186,242,0.3);padding:14px 16px;border-radius:16px;cursor:pointer;transition:all 0.2s;">
-								<div style="width:40px;height:40px;border-radius:12px;background:#00baf2;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;font-size:11px;">Paytm</div>
-								<div style="flex:1;">
-									<div style="font-weight:700;font-size:15px;color:#fff;">Paytm Soundbox QR</div>
-									<div style="font-size:12px;color:#00baf2;">Direct Merchant QR</div>
-								</div>
-								<span style="color:#94a3b8;font-size:18px;">&rarr;</span>
-							</div>
-						</div>
-					</div>
-				`;
-
-				document.body.appendChild(modal);
-
-				document.getElementById('close-gw-modal').onclick = function() {
-					modal.remove();
-				};
-
-				modal.querySelectorAll('.gw-opt').forEach(function(opt) {
-					opt.onclick = function() {
-						var route = opt.dataset.route;
-						var url = route + '?uid=' + encodeURIComponent(uid) + '&amount=' + encodeURIComponent(amount) + '&token=' + encodeURIComponent(token) + '&session=' + encodeURIComponent(session);
-						window.location.href = url;
-					};
-				});
+				var url = route + '?uid=' + encodeURIComponent(uid) + '&amount=' + encodeURIComponent(amount) + '&token=' + encodeURIComponent(token) + '&session=' + encodeURIComponent(session);
+				window.location.href = url;
 			}
 
-			// Intercept clicks on recharge buttons or visits to #/wallet/Recharge
+			// Delegate clicks on the 4 native gateway cards and the recharge button
 			document.addEventListener('click', function(e) {
-				var el = e.target.closest('[class*="recharge"], [class*="Recharge"], [data-route*="Recharge"], a[href*="Recharge"], .recharge_btn, .btn_recharge, [class*="deposit"]');
-				if (el) {
-					if (window.__IS_FORNTMAN_ADMIN__) return;
-					var amt = 500;
-					var text = el.textContent || '';
-					var m = text.match(/₹\\s*(\\d+)/) || text.match(/(\\d+)/);
-					if (m && Number(m[1]) >= 100) amt = Number(m[1]);
+				// 1. Check if user clicked on one of the 4 native gateway cards
+				var tabItem = e.target.closest('.Recharge__container-tabcard__items, [class*="tabcard__items"]');
+				if (tabItem) {
+					var allCards = Array.from(document.querySelectorAll('.Recharge__container-tabcard__items, [class*="tabcard__items"]'));
+					var idx = allCards.indexOf(tabItem);
+					if (idx !== -1) {
+						var text = (tabItem.textContent || '').toLowerCase();
+						if (text.includes('upi-qr') || text.includes('upi qr') || (text.includes('upi') && !text.includes('x'))) idx = 0;
+						else if (text.includes('upi x') || text.includes('upix')) idx = 1;
+						else if (text.includes('wallet')) idx = 2;
+						else if (text.includes('paytm')) idx = 3;
+
+						e.preventDefault();
+						e.stopPropagation();
+						redirectToGateway(idx);
+						return;
+					}
+				}
+
+				// 2. Check if user clicked the recharge submit button on the recharge page
+				var rechargeBtn = e.target.closest('.Recharge__container-rechageBtn, [class*="rechageBtn"], [class*="rechargeBtn"], .btn_recharge');
+				if (rechargeBtn && window.location.hash.includes('Recharge')) {
+					var activeCard = document.querySelector('.Recharge__container-tabcard__items.active, [class*="tabcard__items"].active');
+					var activeIdx = 0;
+					if (activeCard) {
+						var all = Array.from(document.querySelectorAll('.Recharge__container-tabcard__items, [class*="tabcard__items"]'));
+						activeIdx = all.indexOf(activeCard);
+						if (activeIdx === -1) activeIdx = 0;
+					}
 					e.preventDefault();
 					e.stopPropagation();
-					openGatewaySelector(amt);
+					redirectToGateway(activeIdx);
+					return;
 				}
 			}, true);
-
-			window.addEventListener('hashchange', function() {
-				if (window.location.hash.includes('/wallet/Recharge') || window.location.hash.includes('/main/Recharge')) {
-					openGatewaySelector(500);
-				}
-			});
-
-			window.__openRechargeGateway = openGatewaySelector;
 		})();
 		</script>
 		<script src="/web/config?_key=ar103"></script>

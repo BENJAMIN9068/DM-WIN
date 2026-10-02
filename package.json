@@ -11,6 +11,9 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.10.3",
     "ws": "^8.18.0"
   }
 }

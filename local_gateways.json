@@ -4,7 +4,7 @@
     "name": "UPI-QR",
     "route": "/upi-qr",
     "enabled": true,
-    "qrImage": "\"C:\\Users\\godfa\\Downloads\\Screenshot 2026-10-02 185349.png",
+    "qrImage": "/uploads/gateways/upi_qr.png",
     "upiId": "official.dmfirst@bank",
     "minAmount": 100,
     "maxAmount": 50000
