@@ -303,7 +303,7 @@ export class AviatorServerEngine {
     if (userId && users[userId]) return users[userId];
     const curr = this.getCurrentUserNumber();
     if (curr && users[curr]) return users[curr];
-    return Object.values(users)[0] || { amount: 1250, nickName: "Player" };
+    return  { amount: 1250, nickName: "Player" };
   }
 
   handleClientMessage(client, rawData) {

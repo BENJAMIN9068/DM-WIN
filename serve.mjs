@@ -70,7 +70,6 @@ let MongoRecharge = null;
 // cache populated from MongoDB after a successful connection; it is never a
 // filesystem or demo-auth fallback.
 let users = {};
-let currentActiveNumber = null;
 
 function saveUsers() {
   if (isMongoConnected && MongoUser && mongoose.connection.readyState === 1) {
@@ -128,7 +127,7 @@ mongoose.connection.on('error', () => {
 });
 
 // ── Centralized Aviator Engine ────────────────────────────────────────────────
-let aviatorEngine = new AviatorServerEngine(() => users, saveUsers, () => currentActiveNumber);
+let aviatorEngine = new AviatorServerEngine(() => users, saveUsers, () => null);
 
 // ── Deterministic result generator per issue ───────────────────────────────────
 const wingoResults = [
@@ -370,8 +369,8 @@ function resolvePendingBets(filterIssues = null) {
       bet.premium = String(result.premium || result.num);
 
       // Find user to credit
-      const userPhone = bet.userNumber || currentActiveNumber;
-      const user = users[userPhone] || Object.values(users)[0];
+      const userPhone = bet.userNumber;
+      const user = users[userPhone];
 
       if (win && user && winAmount > 0) {
         const oldBal = user.amount;
@@ -1071,7 +1070,7 @@ async function handleRequest(req, res) {
         console.log(`[Referral] User ${chosenNumber} registered using invite code of ${referrerUser.username}!`);
       }
 
-      currentActiveNumber = chosenNumber;
+      
       saveUsers();
 
       console.log(`[AUTH] Register succeeded for user ID ${userId}`);
@@ -1256,7 +1255,7 @@ async function handleRequest(req, res) {
         return;
       }
 
-      currentActiveNumber = chosenNumber;
+      
       users[chosenNumber] = user;
       console.log(`[AUTH] Login succeeded for user ID ${user.userId}`);
       const session = createSessionTokens(user);
@@ -1377,7 +1376,7 @@ async function handleRequest(req, res) {
 
     // VIP Endpoints
     if (endpoint.includes('GetVipUsers')) {
-      const user = users[currentActiveNumber] || Object.values(users)[0] || {
+      const user = getActiveUser(req, true) || {
         nickName: "MemberNNGKZZD9"
       };
       res.end(JSON.stringify({
@@ -1569,7 +1568,7 @@ async function handleRequest(req, res) {
 
     // DailySignIn Endpoints (Sequence: Day 1: ₹5, Day 2: ₹5, Day 3: ₹8, Day 4: ₹2, etc.)
     if (endpoint.includes('GetContinuousSignInRecharges')) {
-      const user = getActiveUser(req) || users[currentActiveNumber] || Object.values(users)[0] || { dailySignCount: 0 };
+      const user = getActiveUser(req) || getActiveUser(req, true) || { dailySignCount: 0 };
       const currentSignCount = user.dailySignCount || 0;
       const cycleDay = (currentSignCount % 7);
       const rewardPattern = [5.00, 5.00, 8.00, 2.00, 5.00, 5.00, 8.00];
@@ -1594,7 +1593,7 @@ async function handleRequest(req, res) {
       return;
     }
     if (endpoint.includes('SetContinuousSinIn')) {
-      const user = getActiveUser(req) || users[currentActiveNumber] || Object.values(users)[0];
+      const user = getActiveUser(req) || getActiveUser(req, true);
       if (user) {
         const count = user.dailySignCount || 0;
         const rewardPattern = [5.00, 5.00, 8.00, 2.00, 5.00, 5.00, 8.00];
@@ -1626,7 +1625,7 @@ async function handleRequest(req, res) {
 
     // Promotion & Referral System
     if (endpoint.includes('NewPromotion')) {
-      const user = getActiveUser(req) || users[currentActiveNumber] || Object.values(users)[0] || { userId: 1677637, number: "9068839558" };
+      const user = getActiveUser(req) || getActiveUser(req, true) || { userId: 1677637, number: "9068839558" };
       const code = `${user.userId}${user.number}`;
       const host = req.headers.host || 'localhost:3000';
       const mylink = `${getPublicOrigin(req)}/#/register?invitationCode=${code}`;
@@ -1663,7 +1662,7 @@ async function handleRequest(req, res) {
     }
 
     if (endpoint.includes('PromotionMytem') || endpoint.includes('GetPromotionRecord') || endpoint.includes('GetSubordinates') || endpoint.includes('GetPromotionMember')) {
-      const user = getActiveUser(req) || users[currentActiveNumber] || Object.values(users)[0] || { referrals: [] };
+      const user = getActiveUser(req) || getActiveUser(req, true) || { referrals: [] };
       const referrals = (user.referrals || []).map(r => ({
         userId: r.userId,
         userName: r.username,
@@ -1727,7 +1726,7 @@ async function handleRequest(req, res) {
       return;
     }
     if (endpoint.includes('GetInvitedWheelInfo')) {
-      const user = getActiveUser(req) || users[currentActiveNumber] || Object.values(users)[0] || { spinWheelChances: 1 };
+      const user = getActiveUser(req) || getActiveUser(req, true) || { spinWheelChances: 1 };
       const chances = typeof user.spinWheelChances === 'number' ? user.spinWheelChances : 1;
       res.end(JSON.stringify({
         code: 0,
@@ -1750,7 +1749,7 @@ async function handleRequest(req, res) {
       return;
     }
     if (endpoint.includes('SpinInvitedWheel')) {
-      const user = getActiveUser(req) || users[currentActiveNumber] || Object.values(users)[0];
+      const user = getActiveUser(req) || getActiveUser(req, true);
       let winAmt = 0;
       if (user && (user.spinWheelChances || 0) > 0) {
         user.spinWheelChances -= 1;
@@ -1774,7 +1773,7 @@ async function handleRequest(req, res) {
 
     // Interactive external game bet/win wallet synchronization
     if (endpoint.includes('GameTransferOrBet')) {
-      const user = users[currentActiveNumber] || Object.values(users)[0];
+      const user = getActiveUser(req, true);
       const delta = parseFloat(body.amount || 0);
       if (user && !isNaN(delta)) {
         user.amount = parseFloat(Math.max(0, (user.amount || 0) + delta).toFixed(2));
@@ -2273,7 +2272,7 @@ async function handleRequest(req, res) {
       // 2. Collect resolved results
       const resolvedResults = [];
       const user = getActiveUser(req, false);
-      const userPhone = user ? (user.number || currentActiveNumber) : currentActiveNumber;
+      const userPhone = user ? (user.number || null) : null;
 
       for (let i = betStore.length - 1; i >= 0; i--) {
         const bet = betStore[i];
@@ -2311,7 +2310,7 @@ async function handleRequest(req, res) {
     // Lottery User Records / History Page
     if (endpoint.includes('GetRecordPage') || endpoint.includes('GetMyHistoryBet') || endpoint.includes('GetPageListUserBet')) {
       const user = getActiveUser(req, true);
-      const userPhone = user ? (user.number || currentActiveNumber) : '';
+      const userPhone = user ? (user.number || null) : '';
       const list = betStore.filter(b => !userPhone || b.userNumber === userPhone || b.userId === user?.userId).slice(-20).reverse();
       res.end(JSON.stringify({
         code: 0,
@@ -2444,7 +2443,7 @@ async function handleRequest(req, res) {
       const selectType = String(rawSelect);
       const orderNumber = "ORD" + Date.now() + Math.floor(Math.random() * 1000);
 
-      const userPhone = user.number || currentActiveNumber;
+      const userPhone = user.number || null;
 
       // Store pending bet
       betStore.push({
