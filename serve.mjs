@@ -4,6 +4,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { AviatorServerEngine } from './aviator_server_engine.mjs';
 import {
   handleAdminAuth,
@@ -59,6 +61,8 @@ const MIME_TYPES = {
 
 // ── MongoDB Database Connection & Schemas ─────────────────────────────────────
 const MONGODB_URI = process.env.MONGODB_URI || '';
+const JWT_SECRET = process.env.JWT_SECRET || '';
+const ALLOWED_ORIGINS = (process.env.FRONTEND_ORIGIN || '').split(',').map(origin => origin.trim()).filter(Boolean);
 let isMongoConnected = false;
 let MongoUser = null;
 let MongoBet = null;
@@ -70,17 +74,7 @@ function loadUsers() {
       return JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
     }
   } catch (e) {}
-  return {
-    "9068839558": {
-      userId: 1677637,
-      number: "9068839558",
-      numberType: "91",
-      username: "919068839558",
-      password: "Password123",
-      amount: 0.00,
-      nickName: "MemberNNGKZZD9"
-    }
-  };
+  return {};
 }
 
 let users = loadUsers();
@@ -122,57 +116,33 @@ function saveBets() {
   }
 }
 
-// Connect to MongoDB if URI is configured
-if (MONGODB_URI) {
-  mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 5000
-  }).then(async () => {
-    isMongoConnected = true;
-    console.log('[MongoDB] Connected successfully to MongoDB instance');
-    try {
-      MongoUser = mongoose.model('User', new mongoose.Schema({
-        userId: { type: Number, unique: true },
-        number: String,
-        username: String,
-        password: String,
-        amount: Number
-      }, { strict: false }));
+async function connectDatabase() {
+  if (!MONGODB_URI) throw new Error('MONGODB_URI environment variable is missing');
+  if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is missing');
 
-      MongoBet = mongoose.model('Bet', new mongoose.Schema({
-        orderNumber: { type: String, unique: true },
-        userId: Number,
-        amount: Number,
-        profitAmount: Number,
-        state: Number
-      }, { strict: false }));
+  await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
+  isMongoConnected = true;
+  console.log('[DB] MongoDB connected');
 
-      MongoRecharge = mongoose.model('Recharge', new mongoose.Schema({
-        id: { type: String, unique: true },
-        userId: Number,
-        amount: Number,
-        status: String
-      }, { strict: false }));
+  MongoUser = mongoose.model('User', new mongoose.Schema({
+    userId: { type: Number, unique: true, index: true },
+    number: { type: String, unique: true, sparse: true, index: true },
+    username: { type: String, unique: true, sparse: true, index: true },
+    password: { type: String, required: true },
+    amount: { type: Number, default: 0 }
+  }, { strict: false }));
+  MongoBet = mongoose.model('Bet', new mongoose.Schema({ orderNumber: { type: String, unique: true }, userId: Number, amount: Number, profitAmount: Number, state: Number }, { strict: false }));
+  MongoRecharge = mongoose.model('Recharge', new mongoose.Schema({ id: { type: String, unique: true }, userId: Number, amount: Number, status: String }, { strict: false }));
 
-      const count = await MongoUser.countDocuments();
-      if (count > 0) {
-        const dbUsers = await MongoUser.find().lean();
-        dbUsers.forEach(u => {
-          if (u.number) users[u.number] = u;
-        });
-        console.log(`[MongoDB] Hydrated ${dbUsers.length} users from MongoDB`);
-      } else {
-        for (const u of Object.values(users)) {
-          await MongoUser.updateOne({ userId: u.userId }, { $set: u }, { upsert: true });
-        }
-        console.log(`[MongoDB] Seeded MongoDB from local_users.json`);
-      }
-    } catch (err) {
-      console.warn('[MongoDB] Initialization error:', err.message);
-    }
-  }).catch(err => {
-    console.warn('[MongoDB] Offline / unreachable (operating via persistent local JSON fallback):', err.message);
-  });
+  const dbUsers = await MongoUser.find().lean();
+  users = Object.fromEntries(dbUsers.filter(user => user.number).map(user => [user.number, user]));
+  console.log(`[DB] Loaded ${dbUsers.length} user records`);
 }
+
+mongoose.connection.on('error', () => {
+  isMongoConnected = false;
+  console.error('[DB] MongoDB connection failed');
+});
 
 // ── Centralized Aviator Engine ────────────────────────────────────────────────
 let aviatorEngine = new AviatorServerEngine(() => users, saveUsers, () => currentActiveNumber);
@@ -240,6 +210,11 @@ function getActiveUser(req = null, requireAuth = false) {
       } catch (e) {}
     }
     if (token) {
+      try {
+        const payload = jwt.verify(token, JWT_SECRET);
+        const authenticatedUser = Object.values(users).find(u => String(u.userId) === String(payload.sub));
+        if (authenticatedUser) return authenticatedUser;
+      } catch (e) {}
       for (const u of Object.values(users)) {
         if (
           (u.token && u.token === token) ||
@@ -258,6 +233,39 @@ function getActiveUser(req = null, requireAuth = false) {
     return null;
   }
   return null;
+}
+
+function createSessionTokens(user) {
+  const token = jwt.sign({ sub: String(user.userId), username: user.username }, JWT_SECRET, { expiresIn: '8h' });
+  const refreshToken = jwt.sign({ sub: String(user.userId), type: 'refresh' }, JWT_SECRET, { expiresIn: '30d' });
+  return { token, refreshToken };
+}
+
+function sendJson(res, status, payload) {
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify(payload));
+}
+
+function databaseUnavailable(res) {
+  sendJson(res, 503, { code: 503, result: false, msg: 'Authentication service is temporarily unavailable. Please try again later.', msgCode: 503 });
+}
+
+function setCorsHeaders(req, res) {
+  const origin = req.headers.origin;
+  if (origin && (ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin))) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Auth-Token, Token');
+}
+
+function getPublicOrigin(req) {
+  const forwardedProtocol = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+  const protocol = forwardedProtocol === 'https' ? 'https' : 'http';
+  const forwardedHost = String(req.headers['x-forwarded-host'] || '').split(',')[0].trim();
+  const host = String(forwardedHost || req.headers.host || 'localhost:3000').replace(/[^a-zA-Z0-9.:-]/g, '');
+  return `${protocol}://${host}`;
 }
 
 
@@ -518,11 +526,20 @@ function getCurrentWinGoIssue() {
   };
 }
 
-const server = http.createServer(async (req, res) => {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', '*');
+const server = http.createServer((req, res) => {
+  handleRequest(req, res).catch(error => {
+    console.error('[SERVER] Request failed:', error.message);
+    if (!res.headersSent) {
+      sendJson(res, 500, { code: 500, result: false, msg: 'The server could not process this request.', msgCode: 500 });
+    } else if (!res.writableEnded) {
+      res.end();
+    }
+  });
+});
+
+async function handleRequest(req, res) {
+  // CORS is only needed for a separately hosted frontend; same-origin deployments need no special case.
+  setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -1002,18 +1019,32 @@ const server = http.createServer(async (req, res) => {
 
     // Register Endpoint: Allows new phone numbers to register with 0.00 initial balance. Rejects already registered.
     if (endpoint.includes('Register') && !endpoint.includes('RegisterState')) {
+      console.log('[AUTH] Register request received');
+      if (req.method !== 'POST') {
+        sendJson(res, 405, { code: 405, result: false, msg: 'Method not allowed', msgCode: 405 });
+        return;
+      }
+      if (!isMongoConnected || !MongoUser || mongoose.connection.readyState !== 1) {
+        console.error('[AUTH] Register failed: database unavailable');
+        databaseUnavailable(res);
+        return;
+      }
       const { number, numberType, fullUsername } = normalizeNumber(body.username);
-      const chosenNumber = number || ("98" + Math.floor(10000000 + Math.random() * 90000000));
+      const chosenNumber = number;
       const full = "91" + chosenNumber;
 
-      if (users[chosenNumber]) {
-        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify({
+      if (!chosenNumber || !body.pwd || String(body.pwd).length < 6) {
+        sendJson(res, 400, { code: 400, result: false, msg: 'A valid phone number and password of at least 6 characters are required.', msgCode: 400 });
+        return;
+      }
+
+      if (await MongoUser.exists({ $or: [{ number: chosenNumber }, { username: full }] })) {
+        sendJson(res, 409, {
           code: 104,
           result: false,
           msg: "Account already exists, please login instead.",
           msgCode: 104
-        }));
+        });
         return;
       }
 
@@ -1034,12 +1065,13 @@ const server = http.createServer(async (req, res) => {
 
       const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
 
-      users[chosenNumber] = {
+      const passwordHash = await bcrypt.hash(String(body.pwd), 12);
+      const newUser = {
         userId,
         number: chosenNumber,
         numberType: "91",
         username: full,
-        password: body.pwd || 'Password123',
+        password: passwordHash,
         amount: 0.00, // STRICT: Always 0.00 on registration!
         nickName: "Member" + chosenNumber.slice(-4),
         invitedBy: referrerUser ? referrerUser.userId : null,
@@ -1049,6 +1081,8 @@ const server = http.createServer(async (req, res) => {
         registeredAt: now,
         dailySignCount: 0
       };
+      await MongoUser.create(newUser);
+      users[chosenNumber] = newUser;
 
       if (referrerUser) {
         if (!referrerUser.referrals) referrerUser.referrals = [];
@@ -1065,7 +1099,8 @@ const server = http.createServer(async (req, res) => {
       currentActiveNumber = chosenNumber;
       saveUsers();
 
-      console.log(`[+] User registered successfully: ${chosenNumber} (ID: ${userId}) - Initial Balance: ₹0.00`);
+      console.log(`[AUTH] Register succeeded for user ID ${userId}`);
+      const session = createSessionTokens(newUser);
 
       res.end(JSON.stringify({
         code: 0,
@@ -1073,9 +1108,9 @@ const server = http.createServer(async (req, res) => {
         msg: "Succeed",
         msgCode: 0,
         data: {
-          token: `local_token_${userId}`,
+          token: session.token,
           tokenHeader: "Bearer ",
-          refreshToken: `local_refresh_${userId}`,
+          refreshToken: session.refreshToken,
           parentUserId: userId,
           lotteryLoginUrl: "",
           webSocketUrl: "",
@@ -1154,7 +1189,7 @@ const server = http.createServer(async (req, res) => {
           isOpenTurntable: true,
           isPartnerReward: true,
           isSelfCustomerService: true,
-          webSiteUrl: "http://localhost:3000",
+          webSiteUrl: getPublicOrigin(req),
           isOpenFacebookEvent: false,
           firstDepositRewardCodeAmount: "1",
           isOpenRegisterPhoneFirstZeroSwitch: false,
@@ -1184,32 +1219,54 @@ const server = http.createServer(async (req, res) => {
 
     // RefreshToken / Login
     if (endpoint.includes('Login') && !endpoint.includes('LoginOff')) {
+      console.log('[AUTH] Login request received');
+      if (req.method !== 'POST') {
+        sendJson(res, 405, { code: 405, result: false, msg: 'Method not allowed', msgCode: 405 });
+        return;
+      }
+      if (!isMongoConnected || !MongoUser || mongoose.connection.readyState !== 1) {
+        console.error('[AUTH] Login failed: database unavailable');
+        databaseUnavailable(res);
+        return;
+      }
       const { number } = normalizeNumber(body.username);
       const chosenNumber = number;
 
-      if (!chosenNumber || !users[chosenNumber]) {
-        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify({
+      if (!chosenNumber || !body.pwd) {
+        sendJson(res, 400, { code: 400, result: false, msg: 'Phone number and password are required.', msgCode: 400 });
+        return;
+      }
+
+      const user = await MongoUser.findOne({ number: chosenNumber }).lean();
+      if (!user) {
+        sendJson(res, 404, {
           code: 101,
           result: false,
           msg: "Account does not exist, please register first.",
           msgCode: 101
-        }));
+        });
         return;
       }
 
-      const user = users[chosenNumber];
-
       // Password verification
-      if (body.pwd && user.password && user.password !== body.pwd) {
-        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify({
+      const passwordMatches = user.password?.startsWith('$2')
+        ? await bcrypt.compare(String(body.pwd), user.password)
+        : String(user.password) === String(body.pwd);
+      if (!passwordMatches) {
+        console.warn('[AUTH] Login failed: invalid credentials');
+        sendJson(res, 401, {
           code: 102,
           result: false,
           msg: "Incorrect password, please try again.",
           msgCode: 102
-        }));
+        });
         return;
+      }
+
+      // Migrate a legacy plaintext password after a successful verification.
+      if (!user.password?.startsWith('$2')) {
+        user.password = await bcrypt.hash(String(body.pwd), 12);
+        await MongoUser.updateOne({ _id: user._id }, { $set: { password: user.password } });
       }
 
       if (user && user.isBanned) {
@@ -1225,7 +1282,9 @@ const server = http.createServer(async (req, res) => {
       }
 
       currentActiveNumber = chosenNumber;
-      console.log(`[+] User logged in: ${chosenNumber} (ID: ${user.userId}) - Balance: ₹${user.amount}`);
+      users[chosenNumber] = user;
+      console.log(`[AUTH] Login succeeded for user ID ${user.userId}`);
+      const session = createSessionTokens(user);
 
       res.end(JSON.stringify({
         code: 0,
@@ -1233,9 +1292,9 @@ const server = http.createServer(async (req, res) => {
         msg: "Succeed",
         msgCode: 0,
         data: {
-          token: `local_token_${user.userId}`,
+          token: session.token,
           tokenHeader: "Bearer ",
-          refreshToken: `local_refresh_${user.userId}`,
+          refreshToken: session.refreshToken,
           parentUserId: user.userId,
           lotteryLoginUrl: ""
         }
@@ -1594,7 +1653,7 @@ const server = http.createServer(async (req, res) => {
       const user = getActiveUser(req) || users[currentActiveNumber] || Object.values(users)[0] || { userId: 1677637, number: "9068839558" };
       const code = `${user.userId}${user.number}`;
       const host = req.headers.host || 'localhost:3000';
-      const mylink = `http://${host}/#/register?invitationCode=${code}`;
+      const mylink = `${getPublicOrigin(req)}/#/register?invitationCode=${code}`;
       const referrals = user.referrals || [];
       res.end(JSON.stringify({
         code: 0,
@@ -2974,7 +3033,7 @@ const server = http.createServer(async (req, res) => {
     const stream = fs.createReadStream(filePath);
     stream.pipe(res);
   });
-});
+}
 
 // ── Centralized Aviator WebSocket Server ──────────────────────────────────────
 const wss = new WebSocketServer({ server, path: '/aviator-ws' });
@@ -3002,9 +3061,17 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[+] Local server running!`);
-  console.log(`[+] Local URL:   http://localhost:${PORT}`);
-  console.log(`[+] Serving:     ${PUBLIC_DIR}`);
-  console.log(`[+] Aviator WS:  ws://localhost:${PORT}/aviator-ws (Synchronized Engine)`);
-});
+async function startServer() {
+  try {
+    await connectDatabase();
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`[SERVER] Listening on port ${PORT}`);
+      console.log(`[SERVER] Serving static frontend from ${PUBLIC_DIR}`);
+    });
+  } catch (error) {
+    console.error(`[DB] MongoDB connection failed: ${error.message}`);
+    process.exit(1);
+  }
+}
+
+startServer();
