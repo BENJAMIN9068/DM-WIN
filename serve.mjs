@@ -372,7 +372,7 @@ function resolvePendingBets(filterIssues = null) {
       const userPhone = bet.userNumber;
       const user = users[userPhone];
 
-      if (win && user && winAmount > 0) {
+      if (win && user && winAmount > 0) { await MongoUser.updateOne({userId: user.userId}, { $inc: { amount: winAmount } });
         const oldBal = user.amount;
         user.amount = parseFloat((user.amount + winAmount).toFixed(2));
         console.log(`[WIN PAYOUT] 🎉 WinGo Payout Credited! User: ${user.number || user.username} | Won: ₹${winAmount} on Bet ${bet.orderNumber} (Issue ${bet.issueNumber}, Select: ${bet.selectType}, Outcome: ${bet.number} ${bet.colour}). Old Balance: ₹${oldBal} -> New Balance: ₹${user.amount}`);
@@ -1776,7 +1776,7 @@ async function handleRequest(req, res) {
       const user = getActiveUser(req, true);
       const delta = parseFloat(body.amount || 0);
       if (user && !isNaN(delta)) {
-        user.amount = parseFloat(Math.max(0, (user.amount || 0) + delta).toFixed(2));
+        await MongoUser.updateOne({userId: user.userId}, { $inc: { amount: delta } }); user.amount += delta;
         saveUsers();
       }
       const bal = (user && typeof user.amount === 'number') ? user.amount : 0.00;
