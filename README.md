@@ -1,4 +1,4 @@
-# DMFirst Full-Stack Gaming & Multi-Gateway Platform
+# WIN-CLUB Gaming & Multi-Gateway Platform
 
 Enterprise-grade full-stack platform featuring interactive gaming engines, centralized wallet balance synchronization, real-time live result prediction engines (WinGo, K3, 5D, TRX WinGo, Aviator crash), admin management console, and 4 standalone UPI payment gateways.
 
@@ -27,7 +27,7 @@ Enterprise-grade full-stack platform featuring interactive gaming engines, centr
 This repository is pre-configured for one-click deployment on **Render.com** (via `render.yaml` or direct Web Service):
 
 1. **Create a New Web Service** on Render.
-2. **Connect this GitHub Repository:** `https://github.com/helpingfutureai-eng/myserver`
+2. **Connect this GitHub Repository:** `https://github.com/helpingfutureai-eng/WIN-CLUB`
 3. **Configure Settings:**
    - **Runtime:** `Node`
    - **Build Command:** `npm install`
