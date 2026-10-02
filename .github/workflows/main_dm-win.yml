@@ -32,7 +32,7 @@ jobs:
           mkdir deployment
           cp package.json package-lock.json serve.mjs admin_backend.mjs aviator_server_engine.mjs deployment/
           cp all_games_dmfirst1.json slots_with_child_dmfirst1.json video_with_child_dmfirst1.json game_categories_dmfirst1.json deployment/
-          cp local_admin_audit.json local_bets.json local_games.json local_gateways.json local_hack_bots.json local_recharges.json local_users.json local_withdrawals.json deployment/
+          cp local_gateways.json deployment/
           cp -a archived_site captured_api_responses deployment/
           test -f deployment/package.json
           test -f deployment/serve.mjs
