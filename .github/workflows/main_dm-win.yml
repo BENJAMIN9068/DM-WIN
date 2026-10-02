@@ -70,13 +70,6 @@ jobs:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_9BF87F0AFA06414FAB48A9585B2D54F3 }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_24A153C515ED4216868C08E04DA8133F }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_392E6CD8DE14405C9AEFB0423CCB4775 }}
-      - name: Enable App Service build automation
-        shell: bash
-        run: |
-          set -euo pipefail
-          resource_group="$(az webapp list --query \"[?name=='${AZURE_WEBAPP_NAME}'].resourceGroup | [0]\" --output tsv)"
-          test -n "$resource_group"
-          az webapp config appsettings set --resource-group "$resource_group" --name "$AZURE_WEBAPP_NAME" --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true ENABLE_ORYX_BUILD=true "WEBSITE_NODE_DEFAULT_VERSION=~20"
       - name: Deploy runtime artifact to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
