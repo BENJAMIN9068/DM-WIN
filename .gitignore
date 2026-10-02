@@ -21,3 +21,5 @@ captured_pages/
 archived_site/*.png
 archived_site/uploads/recharges/*.png
 deployment/
+auth_session.json
+local_*.json
