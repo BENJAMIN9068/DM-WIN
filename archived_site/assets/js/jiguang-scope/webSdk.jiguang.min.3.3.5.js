@@ -20,7 +20,7 @@
 		<meta name="twitter:image" content="/icon-192x192.png?v=2" />
 		<script type="module" crossorigin src="/assets/js/index-DSllDNEm.js"></script>
 		<link rel="stylesheet" crossorigin href="/assets/css/index-DR8q6HEk.css">
-		<script>window.CONFIG=Object.freeze({"VITE_API_URL":"https://api.dmfirst9api.com","VITE_BASE_LANGUAGE":"en","VITE_BASE_PROJECTNAME":"ar103","VITE_HOME":"public9Home","VITE_MAINCOLOR":"public9GreenGold","VITE_GTAG_ID":"","BASE_URL":"/","MODE":"production","DEV":true,"PROD":false,"tenant":"ar103"});</script>
+		<script>window.CONFIG=Object.freeze({"VITE_API_URL":"","VITE_BASE_LANGUAGE":"en","VITE_BASE_PROJECTNAME":"ar103","VITE_HOME":"public9Home","VITE_MAINCOLOR":"public9GreenGold","VITE_GTAG_ID":"","BASE_URL":"/","MODE":"production","DEV":true,"PROD":false,"tenant":"ar103"});</script>
 		<script src="/web/config?_key=ar103"></script>
 	</head>
 

@@ -28,8 +28,6 @@ const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'archived_site');
-const USERS_FILE = path.join(__dirname, 'local_users.json');
-const BETS_FILE = path.join(__dirname, 'local_bets.json');
 const GATEWAYS_FILE = path.join(__dirname, 'local_gateways.json');
 const RECHARGES_FILE = path.join(__dirname, 'local_recharges.json');
 const ALL_GAMES_FILE = path.join(__dirname, 'all_games_dmfirst1.json');
@@ -68,51 +66,34 @@ let MongoUser = null;
 let MongoBet = null;
 let MongoRecharge = null;
 
-function loadUsers() {
-  try {
-    if (fs.existsSync(USERS_FILE)) {
-      return JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
-    }
-  } catch (e) {}
-  return {};
-}
-
-let users = loadUsers();
-let currentActiveNumber = Object.keys(users)[0] || "9068839558";
+// Authentication state is MongoDB-backed.  This process-local map is only a
+// cache populated from MongoDB after a successful connection; it is never a
+// filesystem or demo-auth fallback.
+let users = {};
+let currentActiveNumber = null;
 
 function saveUsers() {
-  try {
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
-  } catch (e) {}
   if (isMongoConnected && MongoUser && mongoose.connection.readyState === 1) {
-    try {
-      for (const u of Object.values(users)) {
-        MongoUser.updateOne({ userId: u.userId }, { $set: u }, { upsert: true }).catch(() => {});
-      }
-    } catch(e) {}
+    const operations = Object.values(users)
+      .filter(user => user?.userId)
+      .map(({ _id, ...user }) => ({
+        updateOne: { filter: { userId: user.userId }, update: { $set: user }, upsert: true }
+      }));
+    if (operations.length) MongoUser.bulkWrite(operations, { ordered: false }).catch(() => {});
   }
 }
 
 // ── Bet Store ──────────────────────────────────────────────────────────────────
-function loadBets() {
-  try {
-    if (fs.existsSync(BETS_FILE)) return JSON.parse(fs.readFileSync(BETS_FILE, 'utf-8'));
-  } catch (e) {}
-  return [];
-}
-let betStore = loadBets();
+let betStore = [];
 
 function saveBets() {
-  try {
-    fs.writeFileSync(BETS_FILE, JSON.stringify(betStore, null, 2), 'utf-8');
-  } catch (e) {}
   if (isMongoConnected && MongoBet && mongoose.connection.readyState === 1) {
-    try {
-      if (betStore.length > 0) {
-        const lastBet = betStore[betStore.length - 1];
-        MongoBet.updateOne({ orderNumber: lastBet.orderNumber }, { $set: lastBet }, { upsert: true }).catch(() => {});
-      }
-    } catch(e) {}
+    const operations = betStore
+      .filter(bet => bet?.orderNumber)
+      .map(({ _id, ...bet }) => ({
+        updateOne: { filter: { orderNumber: bet.orderNumber }, update: { $set: bet }, upsert: true }
+      }));
+    if (operations.length) MongoBet.bulkWrite(operations, { ordered: false }).catch(() => {});
   }
 }
 
@@ -136,6 +117,8 @@ async function connectDatabase() {
 
   const dbUsers = await MongoUser.find().lean();
   users = Object.fromEntries(dbUsers.filter(user => user.number).map(user => [user.number, user]));
+  const dbBets = await MongoBet.find().sort({ addTime: -1 }).limit(200).lean();
+  betStore = dbBets.reverse();
   console.log(`[DB] Loaded ${dbUsers.length} user records`);
 }
 
@@ -194,7 +177,6 @@ function resultForIssue(issueNumber, gameKey = 'wingo_30s') {
 }
 
 function getActiveUser(req = null, requireAuth = false) {
-  users = loadUsers();
   if (req) {
     let token = '';
     if (req.headers) {
@@ -215,18 +197,6 @@ function getActiveUser(req = null, requireAuth = false) {
         const authenticatedUser = Object.values(users).find(u => String(u.userId) === String(payload.sub));
         if (authenticatedUser) return authenticatedUser;
       } catch (e) {}
-      for (const u of Object.values(users)) {
-        if (
-          (u.token && u.token === token) ||
-          token === `local_token_${u.userId}` ||
-          token === `local_refresh_${u.userId}` ||
-          token.includes(String(u.userId)) ||
-          token === String(u.number) ||
-          token === String(u.username)
-        ) {
-          return u;
-        }
-      }
     }
   }
   if (requireAuth) {
@@ -670,11 +640,10 @@ async function handleRequest(req, res) {
     }
 
     // Recharges
-    if (endpoint.startsWith('/api/admin/recharges')) {
-      const recRes = await handleAdminRecharges(endpoint, req.method, body);
-      if (recRes) {
-        users = loadUsers();
-        res.writeHead(recRes.code === 0 ? 200 : recRes.code || 400);
+      if (endpoint.startsWith('/api/admin/recharges')) {
+        const recRes = await handleAdminRecharges(endpoint, req.method, body);
+        if (recRes) {
+          res.writeHead(recRes.code === 0 ? 200 : recRes.code || 400);
         res.end(JSON.stringify(recRes));
         return;
       }
@@ -701,11 +670,10 @@ async function handleRequest(req, res) {
     }
 
     // Users
-    if (endpoint.startsWith('/api/admin/users')) {
-      const usersRes = await handleAdminUsers(endpoint, req.method, body, parsedUrl.searchParams);
-      if (usersRes) {
-        users = loadUsers();
-        res.writeHead(usersRes.code === 0 ? 200 : usersRes.code || 400);
+      if (endpoint.startsWith('/api/admin/users')) {
+        const usersRes = await handleAdminUsers(endpoint, req.method, body, parsedUrl.searchParams);
+        if (usersRes) {
+          res.writeHead(usersRes.code === 0 ? 200 : usersRes.code || 400);
         res.end(JSON.stringify(usersRes));
         return;
       }
@@ -841,7 +809,14 @@ async function handleRequest(req, res) {
     const { gateway, userId, amount, utrNumber, fullName, screenshot, token, session } = body;
 
     // Server-side Authentication Verification
-    const authUser = getActiveUser(req, false) || Object.values(users).find(u => String(u.userId) === String(userId) || (token && (u.token === token || token.includes(String(u.userId)))));
+    let authUser = getActiveUser(req, false);
+    if (!authUser && token) {
+      try {
+        const payload = jwt.verify(String(token).replace(/^Bearer\s+/i, ''), JWT_SECRET);
+        authUser = Object.values(users).find(user => String(user.userId) === String(payload.sub)) || null;
+      } catch (e) {}
+    }
+    if (authUser && userId && String(authUser.userId) !== String(userId)) authUser = null;
     if (!authUser) {
       res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ code: 401, result: false, msg: 'Authentication required. Please login before making a recharge.' }));
@@ -1309,14 +1284,15 @@ async function handleRequest(req, res) {
         res.end(JSON.stringify({ code: 4, result: false, msg: "Session expired. Please log in again.", msgCode: 4 }));
         return;
       }
+      const session = createSessionTokens(user);
       res.end(JSON.stringify({
         code: 0,
         result: true,
         msg: "success",
         data: {
-          token: `local_token_${user.userId}`,
+          token: session.token,
           tokenHeader: "Bearer ",
-          refreshToken: `local_refresh_${user.userId}`
+          refreshToken: session.refreshToken
         }
       }));
       return;
