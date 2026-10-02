@@ -7,4 +7,6 @@ scratch/
 verification_screenshots/
 diagnostic_results/
 captured_pages/
-*.png
+/*.png
+archived_site/*.png
+archived_site/uploads/recharges/*.png
