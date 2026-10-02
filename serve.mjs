@@ -338,7 +338,7 @@ function evaluateBet(bet, result) {
   return { win, profitAmount, multiplier };
 }
 
-function resolvePendingBets(filterIssues = null) {
+async function resolvePendingBets(filterIssues = null) {
   const now = Date.now();
   let resolvedAny = false;
 
