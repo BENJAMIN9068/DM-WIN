@@ -1,0 +1,31 @@
+{
+  "data": {
+    "lastBandCarkName": null,
+    "withdrawalslist": [],
+    "withdrawalsrule": {
+      "arbWithdrawRecommand": null,
+      "amountofCode": 0,
+      "withdrawCount": 3,
+      "withdrawRemainingCount": 3,
+      "startTime": "00:00",
+      "endTime": "23:55",
+      "fee": 0,
+      "minPrice": 110,
+      "maxPrice": 10000000,
+      "amount": 0,
+      "canWithdrawAmount": 0,
+      "c2cUnitAmount": 0,
+      "uRate": 0,
+      "uGold": 0,
+      "withMinPrice": 0,
+      "withMaxPrice": 0
+    },
+    "arUpiRecommandBankList": null,
+    "needKycValidIsOpen": false
+  },
+  "code": 0,
+  "msg": "Succeed",
+  "msgCode": 0,
+  "traceId": "",
+  "serviceNowTime": "2026-10-02 00:38:30"
+}

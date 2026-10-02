@@ -1,0 +1,29 @@
+{
+  "data": {
+    "mylink": "https://www.dmfirst6.com/#/register?r_code=555131677637",
+    "aglink": "MTg5MCY9Jj0mZXlKaFoyVnVkRjlwWkNJNk1UWTNOell6TjMwPSY9Jj0mVFlLUDhY",
+    "mycode": "555131677637",
+    "children_Lv_1_Count": 0,
+    "children_Lv_Count_X": 0,
+    "children_Lv_1_Count_Add": 0,
+    "children_Lv_Count_X_Add": 0,
+    "children_Lv_1_Count_Add_Yesterday": 0,
+    "children_Lv_Count_X_Add_Yesterday": 0,
+    "children_Lv_1_RechargesSumCount": 0,
+    "children_Lv_RechargesSumCount": 0,
+    "children_Lv_1_FirstRechargesCount": 0,
+    "children_Lv_FirstRechargesCount": 0,
+    "children_Lv_1_RechargesSumAmount": 0,
+    "children_Lv_RechargesSumAmount": 0,
+    "children_Lv_RebateAmount_Yesterday": 0,
+    "children_Lv_1_RebateAmount_Yesterday": 0,
+    "children_Lv_RebateAmount_Week": 0,
+    "children_Lv_1_RebateAmount_X_Yesterday": 0,
+    "children_Lv_RebateAmount": 0
+  },
+  "code": 0,
+  "msg": "Succeed",
+  "msgCode": 0,
+  "traceId": "",
+  "serviceNowTime": "2026-10-02 00:38:23"
+}

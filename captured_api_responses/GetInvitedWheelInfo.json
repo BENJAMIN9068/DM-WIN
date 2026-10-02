@@ -1,0 +1,30 @@
+{
+  "data": {
+    "isOpenInvitedWheel": true,
+    "isFirstInvitedWheel": false,
+    "userInvitedWheelCount": 0,
+    "userInvitedWheelAmount": 0,
+    "invitedWheelTotalPrizeAmount": 500,
+    "invitedWheelAmountofcodeAmount": 0,
+    "expiredTime": "",
+    "diskDisplayAmount": [
+      100,
+      25,
+      30,
+      35,
+      40,
+      45,
+      50
+    ],
+    "noWinningRandomAmount": [
+      0,
+      10
+    ],
+    "lastWheelRecordList": []
+  },
+  "code": 0,
+  "msg": "Succeed",
+  "msgCode": 0,
+  "traceId": "",
+  "serviceNowTime": "2026-10-02 01:01:58"
+}

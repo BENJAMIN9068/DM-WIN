@@ -1,0 +1,129 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "vipName": "VIP1",
+      "status": 1,
+      "currentExp": 0,
+      "upgrade": 3000,
+      "relegationExp": 0,
+      "relegation": 1000,
+      "deductExp": 800,
+      "amount": 1,
+      "upgradeStatus": 0
+    },
+    {
+      "id": 2,
+      "vipName": "VIP2",
+      "status": 1,
+      "currentExp": 0,
+      "upgrade": 30000,
+      "relegationExp": 0,
+      "relegation": 10000,
+      "deductExp": 10000,
+      "amount": 1,
+      "upgradeStatus": 0
+    },
+    {
+      "id": 3,
+      "vipName": "VIP3",
+      "status": 1,
+      "currentExp": 0,
+      "upgrade": 200000,
+      "relegationExp": 0,
+      "relegation": 100000,
+      "deductExp": 80000,
+      "amount": 1,
+      "upgradeStatus": 0
+    },
+    {
+      "id": 4,
+      "vipName": "VIP4",
+      "status": 1,
+      "currentExp": 0,
+      "upgrade": 2000000,
+      "relegationExp": 0,
+      "relegation": 800000,
+      "deductExp": 500000,
+      "amount": 1,
+      "upgradeStatus": 0
+    },
+    {
+      "id": 5,
+      "vipName": "VIP5",
+      "status": 1,
+      "currentExp": 0,
+      "upgrade": 20000000,
+      "relegationExp": 0,
+      "relegation": 5000000,
+      "deductExp": 4000000,
+      "amount": 1,
+      "upgradeStatus": 0
+    },
+    {
+      "id": 6,
+      "vipName": "VIP6",
+      "status": 1,
+      "currentExp": 0,
+      "upgrade": 50000000,
+      "relegationExp": 0,
+      "relegation": 20000000,
+      "deductExp": 20000000,
+      "amount": 1,
+      "upgradeStatus": 0
+    },
+    {
+      "id": 7,
+      "vipName": "VIP7",
+      "status": 1,
+      "currentExp": 0,
+      "upgrade": 100000000,
+      "relegationExp": 0,
+      "relegation": 30000000,
+      "deductExp": 30000000,
+      "amount": 1,
+      "upgradeStatus": 0
+    },
+    {
+      "id": 8,
+      "vipName": "VIP8",
+      "status": 1,
+      "currentExp": 0,
+      "upgrade": 1000000000,
+      "relegationExp": 0,
+      "relegation": 200000000,
+      "deductExp": 200000000,
+      "amount": 1,
+      "upgradeStatus": 0
+    },
+    {
+      "id": 9,
+      "vipName": "VIP9",
+      "status": 1,
+      "currentExp": 0,
+      "upgrade": 5000000000,
+      "relegationExp": 0,
+      "relegation": 1000000000,
+      "deductExp": 1000000000,
+      "amount": 1,
+      "upgradeStatus": 0
+    },
+    {
+      "id": 10,
+      "vipName": "VIP10",
+      "status": 1,
+      "currentExp": 0,
+      "upgrade": 9999999999,
+      "relegationExp": 0,
+      "relegation": 3333333333,
+      "deductExp": 3333333333,
+      "amount": 1,
+      "upgradeStatus": 0
+    }
+  ],
+  "code": 0,
+  "msg": "Succeed",
+  "msgCode": 0,
+  "traceId": "",
+  "serviceNowTime": "2026-10-02 00:38:36"
+}

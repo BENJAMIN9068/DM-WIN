@@ -1,0 +1,366 @@
+[
+  {
+    "id": "AUDIT-1790947494202-500",
+    "timestamp": "2026-10-02 13:24:54",
+    "admin": "admin",
+    "action": "GATEWAY_UPDATE",
+    "details": "{\"gatewayId\":\"upi-qr\",\"updates\":{\"qrImage\":\"\\\"C:\\\\Users\\\\godfa\\\\Downloads\\\\Screenshot 2026-10-02 185349.png\"}}"
+  },
+  {
+    "id": "AUDIT-1790947481011-444",
+    "timestamp": "2026-10-02 13:24:41",
+    "admin": "admin",
+    "action": "GATEWAY_UPDATE",
+    "details": "{\"gatewayId\":\"upi-qr\",\"updates\":{\"qrImage\":\"\\\"C:\\\\Users\\\\godfa\\\\Downloads\\\\Screenshot 2026-10-02 185349.png\\\"\"}}"
+  },
+  {
+    "id": "AUDIT-1790947453613-344",
+    "timestamp": "2026-10-02 13:24:13",
+    "admin": "admin",
+    "action": "GATEWAY_UPDATE",
+    "details": "{\"gatewayId\":\"upi-qr\",\"updates\":{\"qrImage\":\"/uploads/gateways/upi_qr.svg\"}}"
+  },
+  {
+    "id": "AUDIT-1790942943654-316",
+    "timestamp": "2026-10-02 12:09:03",
+    "admin": "admin",
+    "action": "ACCEPT_RECHARGE",
+    "details": "{\"rechargeId\":\"REC-1009\",\"userId\":1677637,\"amount\":750,\"utr\":\"987654321012\"}"
+  },
+  {
+    "id": "AUDIT-1790942943642-352",
+    "timestamp": "2026-10-02 12:09:03",
+    "admin": "admin",
+    "action": "GATEWAY_STATUS_CHANGE",
+    "details": "{\"gatewayId\":\"paytmqr\",\"enabled\":true,\"name\":\"Paytm x QR\"}"
+  },
+  {
+    "id": "AUDIT-1790942943637-975",
+    "timestamp": "2026-10-02 12:09:03",
+    "admin": "admin",
+    "action": "GATEWAY_STATUS_CHANGE",
+    "details": "{\"gatewayId\":\"paytmqr\",\"enabled\":false,\"name\":\"Paytm x QR\"}"
+  },
+  {
+    "id": "AUDIT-1790942835035-440",
+    "timestamp": "2026-10-02 12:07:15",
+    "admin": "admin",
+    "action": "ACCEPT_RECHARGE",
+    "details": "{\"rechargeId\":\"REC-1008\",\"userId\":1677637,\"amount\":750,\"utr\":\"987654321012\"}"
+  },
+  {
+    "id": "AUDIT-1790942835024-42",
+    "timestamp": "2026-10-02 12:07:15",
+    "admin": "admin",
+    "action": "GATEWAY_STATUS_CHANGE",
+    "details": "{\"gatewayId\":\"paytmqr\",\"enabled\":true,\"name\":\"Paytm x QR\"}"
+  },
+  {
+    "id": "AUDIT-1790942835019-154",
+    "timestamp": "2026-10-02 12:07:15",
+    "admin": "admin",
+    "action": "GATEWAY_STATUS_CHANGE",
+    "details": "{\"gatewayId\":\"paytmqr\",\"enabled\":false,\"name\":\"Paytm x QR\"}"
+  },
+  {
+    "id": "AUDIT-1790931281682-31",
+    "timestamp": "2026-10-02 08:54:41",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "{\"gameKey\":\"wingo_1m\",\"gameName\":\"Win Go 1Min\",\"declaredResult\":\"9\",\"issueNumber\":\"202610020865\",\"secondsLeft\":19}"
+  },
+  {
+    "id": "AUDIT-1790929116298-347",
+    "timestamp": "2026-10-02 08:18:36",
+    "admin": "admin",
+    "action": "API_RUN_TEST",
+    "details": "{\"gameCode\":\"aviator\",\"gameName\":\"Aviator\",\"status\":\"PASSED\",\"executionMs\":2}"
+  },
+  {
+    "id": "AUDIT-1790929038352-595",
+    "timestamp": "2026-10-02 08:17:18",
+    "admin": "admin",
+    "action": "GAME_WIN_RATE_CHANGE",
+    "details": "{\"gameCode\":\"aviator\",\"gameName\":\"Aviator\",\"oldWinRate\":100,\"newWinRate\":1,\"mode\":\"manual\"}"
+  },
+  {
+    "id": "AUDIT-1790929009258-206",
+    "timestamp": "2026-10-02 08:16:49",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "{\"gameKey\":\"aviator\",\"declaredResult\":\"1\",\"lockCountdown\":11}"
+  },
+  {
+    "id": "AUDIT-1790929003020-142",
+    "timestamp": "2026-10-02 08:16:43",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "{\"gameKey\":\"aviator\",\"declaredResult\":\"1\",\"lockCountdown\":17}"
+  },
+  {
+    "id": "AUDIT-1790928941417-315",
+    "timestamp": "2026-10-02 08:15:41",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "{\"gameKey\":\"aviator\",\"declaredResult\":\"29\",\"lockCountdown\":19}"
+  },
+  {
+    "id": "AUDIT-1790928903032-688",
+    "timestamp": "2026-10-02 08:15:03",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "{\"gameKey\":\"aviator\",\"declaredResult\":\"23\",\"lockCountdown\":27}"
+  },
+  {
+    "id": "AUDIT-1790928858586-787",
+    "timestamp": "2026-10-02 08:14:18",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "{\"gameKey\":\"aviator\",\"declaredResult\":\"20\",\"lockCountdown\":12}"
+  },
+  {
+    "id": "AUDIT-1790928767541-769",
+    "timestamp": "2026-10-02 08:12:47",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "{\"gameKey\":\"aviator\",\"declaredResult\":\"849\",\"lockCountdown\":13}"
+  },
+  {
+    "id": "AUDIT-1790928684895-272",
+    "timestamp": "2026-10-02 08:11:24",
+    "admin": "admin",
+    "action": "GAME_WIN_RATE_CHANGE",
+    "details": "{\"gameCode\":\"aviator\",\"gameName\":\"Aviator\",\"oldWinRate\":45,\"newWinRate\":100,\"mode\":\"manual\"}"
+  },
+  {
+    "id": "AUDIT-1790928470707-508",
+    "timestamp": "2026-10-02 08:07:50",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "{\"gameKey\":\"wingo\",\"declaredResult\":\"2\",\"lockCountdown\":10}"
+  },
+  {
+    "id": "AUDIT-1790928365841-527",
+    "timestamp": "2026-10-02 08:06:05",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "{\"gameKey\":\"k3\",\"declaredResult\":\"666\",\"lockCountdown\":25}"
+  },
+  {
+    "id": "AUDIT-1790928323421-657",
+    "timestamp": "2026-10-02 08:05:23",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "{\"gameKey\":\"wingo\",\"declaredResult\":\"0\",\"lockCountdown\":7}"
+  },
+  {
+    "id": "AUDIT-1790928260552-786",
+    "timestamp": "2026-10-02 08:04:20",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "{\"gameKey\":\"wingo\",\"declaredResult\":\"0\",\"lockCountdown\":10}"
+  },
+  {
+    "id": "AUDIT-1790928112714-114",
+    "timestamp": "2026-10-02 08:01:52",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "{\"gameKey\":\"aviator\",\"declaredResult\":\"149.7\",\"lockCountdown\":8}"
+  },
+  {
+    "id": "AUDIT-1790928064709-460",
+    "timestamp": "2026-10-02 08:01:04",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "{\"gameKey\":\"aviator\",\"declaredResult\":\"149.7\",\"lockCountdown\":26}"
+  },
+  {
+    "id": "AUDIT-1790927961264-420",
+    "timestamp": "2026-10-02 07:59:21",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "{\"gameKey\":\"aviator\",\"declaredResult\":\"1000\",\"lockCountdown\":9}"
+  },
+  {
+    "id": "AUDIT-1790927899324-825",
+    "timestamp": "2026-10-02 07:58:19",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "{\"gameKey\":\"aviator\",\"declaredResult\":\"3.50\",\"lockCountdown\":11}"
+  },
+  {
+    "id": "AUDIT-1790927037060-381",
+    "timestamp": "2026-10-02 07:43:57",
+    "admin": "admin",
+    "action": "EDIT_BALANCE",
+    "details": "{\"adminId\":\"admin\",\"userId\":1677637,\"username\":\"919068839558\",\"previousBalance\":1850,\"newBalance\":1850,\"reason\":\"Manual Balance Adjustment by Admin\",\"timestamp\":\"2026-10-02T07:43:57.060Z\"}"
+  },
+  {
+    "id": "AUDIT-1790927026233-784",
+    "timestamp": "2026-10-02 07:43:46",
+    "admin": "admin",
+    "action": "HACK_BOT_USER_FORCED_RESULT",
+    "details": "{\"uid\":1677637,\"game\":\"chicken-road\",\"forcedMultiplier\":19.94,\"band\":\"LOW\"}"
+  },
+  {
+    "id": "AUDIT-1790927021878-913",
+    "timestamp": "2026-10-02 07:43:41",
+    "admin": "admin",
+    "action": "GAME_STATUS_CHANGE",
+    "details": "{\"gameCode\":\"WinGo_30S\",\"oldStatus\":\"Active\",\"newStatus\":\"Hidden\",\"gameName\":\"Win Go 30S\"}"
+  },
+  {
+    "id": "AUDIT-1790927018043-256",
+    "timestamp": "2026-10-02 07:43:38",
+    "admin": "admin",
+    "action": "API_RUN_TEST",
+    "details": "{\"gameCode\":\"WinGo_30S\",\"gameName\":\"Win Go 30S\",\"status\":\"PASSED\",\"executionMs\":0}"
+  },
+  {
+    "id": "AUDIT-1790926866747-366",
+    "timestamp": "2026-10-02 07:41:06",
+    "admin": "admin",
+    "action": "EDIT_BALANCE",
+    "details": "{\"adminId\":\"admin\",\"userId\":3051920,\"username\":\"919811223344\",\"previousBalance\":10420,\"newBalance\":10,\"reason\":\"Manual Balance Adjustment by Admin\",\"timestamp\":\"2026-10-02T07:41:06.746Z\"}"
+  },
+  {
+    "id": "AUDIT-1790926854698-735",
+    "timestamp": "2026-10-02 07:40:54",
+    "admin": "admin",
+    "action": "UNBAN_USER",
+    "details": "{\"userId\":1677637,\"username\":\"919068839558\",\"isBanned\":false}"
+  },
+  {
+    "id": "AUDIT-1790926852117-936",
+    "timestamp": "2026-10-02 07:40:52",
+    "admin": "admin",
+    "action": "BAN_USER",
+    "details": "{\"userId\":1677637,\"username\":\"919068839558\",\"isBanned\":true}"
+  },
+  {
+    "id": "AUDIT-1790926838702-568",
+    "timestamp": "2026-10-02 07:40:38",
+    "admin": "admin",
+    "action": "WITHDRAWAL_STATUS_CHANGE",
+    "details": "{\"withdrawalId\":\"WTH-2002\",\"oldStatus\":\"Pending\",\"newStatus\":\"Accepted\",\"userId\":2138998,\"amount\":1200}"
+  },
+  {
+    "id": "AUDIT-1790926798508-225",
+    "timestamp": "2026-10-02 07:39:58",
+    "admin": "admin",
+    "action": "API_RUN_TEST",
+    "details": "{\"gameCode\":\"WinGo_30S\",\"gameName\":\"Win Go 30S\",\"status\":\"PASSED\",\"executionMs\":0}"
+  },
+  {
+    "id": "AUDIT-1790926789954-856",
+    "timestamp": "2026-10-02 07:39:49",
+    "admin": "admin",
+    "action": "EDIT_BALANCE",
+    "details": "{\"adminId\":\"admin\",\"userId\":1677637,\"username\":\"919068839558\",\"previousBalance\":1850,\"newBalance\":1850,\"reason\":\"Manual Balance Adjustment by Admin\",\"timestamp\":\"2026-10-02T07:39:49.953Z\"}"
+  },
+  {
+    "id": "AUDIT-1790926785105-508",
+    "timestamp": "2026-10-02 07:39:45",
+    "admin": "admin",
+    "action": "WITHDRAWAL_STATUS_CHANGE",
+    "details": "{\"withdrawalId\":\"WTH-2001\",\"oldStatus\":\"Pending\",\"newStatus\":\"Accepted\",\"userId\":1677637,\"amount\":500}"
+  },
+  {
+    "id": "AUDIT-1790926780875-875",
+    "timestamp": "2026-10-02 07:39:40",
+    "admin": "admin",
+    "action": "ACCEPT_RECHARGE",
+    "details": "{\"rechargeId\":\"REC-1004\",\"userId\":3051920,\"amount\":5000,\"utr\":\"428190999332\"}"
+  },
+  {
+    "id": "AUDIT-1790926774788-467",
+    "timestamp": "2026-10-02 07:39:34",
+    "admin": "admin",
+    "action": "HACK_BOT_USER_FORCED_RESULT",
+    "details": "{\"uid\":1677637,\"game\":\"chicken-road\",\"forcedMultiplier\":43.16,\"band\":\"HIGH\"}"
+  },
+  {
+    "id": "AUDIT-1790926770432-348",
+    "timestamp": "2026-10-02 07:39:30",
+    "admin": "admin",
+    "action": "GAME_STATUS_CHANGE",
+    "details": "{\"gameCode\":\"WinGo_30S\",\"oldStatus\":\"Hidden\",\"newStatus\":\"Active\",\"gameName\":\"Win Go 30S\"}"
+  },
+  {
+    "id": "AUDIT-1790926766606-727",
+    "timestamp": "2026-10-02 07:39:26",
+    "admin": "admin",
+    "action": "API_RUN_TEST",
+    "details": "{\"gameCode\":\"WinGo_30S\",\"gameName\":\"Win Go 30S\",\"status\":\"PASSED\",\"executionMs\":0}"
+  },
+  {
+    "id": "AUDIT-1790926505894-982",
+    "timestamp": "2026-10-02 07:35:05",
+    "admin": "admin",
+    "action": "EDIT_BALANCE",
+    "details": "{\"adminId\":\"admin\",\"userId\":1677637,\"username\":\"919068839558\",\"previousBalance\":1250,\"newBalance\":1850,\"reason\":\"Manual Balance Adjustment by Admin\",\"timestamp\":\"2026-10-02T07:35:05.893Z\"}"
+  },
+  {
+    "id": "AUDIT-1790926501067-29",
+    "timestamp": "2026-10-02 07:35:01",
+    "admin": "admin",
+    "action": "WITHDRAWAL_STATUS_CHANGE",
+    "details": "{\"withdrawalId\":\"WTH-2001\",\"oldStatus\":\"Requesting\",\"newStatus\":\"Pending\",\"userId\":1677637,\"amount\":500}"
+  },
+  {
+    "id": "AUDIT-1790926496853-639",
+    "timestamp": "2026-10-02 07:34:56",
+    "admin": "admin",
+    "action": "ACCEPT_RECHARGE",
+    "details": "{\"rechargeId\":\"REC-1003\",\"userId\":5293012,\"amount\":500,\"utr\":\"428190881234\"}"
+  },
+  {
+    "id": "AUDIT-1790926490856-173",
+    "timestamp": "2026-10-02 07:34:50",
+    "admin": "admin",
+    "action": "HACK_BOT_USER_FORCED_RESULT",
+    "details": "{\"uid\":1677637,\"game\":\"chicken-road\",\"forcedMultiplier\":13.28,\"band\":\"LOW\"}"
+  },
+  {
+    "id": "AUDIT-1790926486493-580",
+    "timestamp": "2026-10-02 07:34:46",
+    "admin": "admin",
+    "action": "GAME_STATUS_CHANGE",
+    "details": "{\"gameCode\":\"WinGo_30S\",\"oldStatus\":\"Active\",\"newStatus\":\"Hidden\",\"gameName\":\"Win Go 30S\"}"
+  },
+  {
+    "id": "AUDIT-1790926482731-600",
+    "timestamp": "2026-10-02 07:34:42",
+    "admin": "admin",
+    "action": "API_RUN_TEST",
+    "details": "{\"gameCode\":\"WinGo_30S\",\"gameName\":\"Win Go 30S\",\"status\":\"PASSED\",\"executionMs\":0}"
+  },
+  {
+    "id": "AUDIT-101",
+    "timestamp": "2026-10-02 12:40:00",
+    "admin": "admin",
+    "action": "HACK_BOT_UNIFIED_DECLARATION",
+    "details": "Declared Aviator next multiplier: 3.50x (Locked 6s before round)"
+  },
+  {
+    "id": "AUDIT-102",
+    "timestamp": "2026-10-02 12:35:00",
+    "admin": "admin",
+    "action": "HACK_BOT_USER_FORCED_RESULT",
+    "details": "Forced UID 2138998 Tower Dash result to 8.20x (Within 3x-50x bounds, low-band)"
+  },
+  {
+    "id": "AUDIT-103",
+    "timestamp": "2026-10-02 11:20:05",
+    "admin": "admin",
+    "action": "ACCEPT_RECHARGE",
+    "details": "Accepted recharge REC-1002 of ₹2,500.00 for UID 2138998. Credited to wallet."
+  },
+  {
+    "id": "AUDIT-104",
+    "timestamp": "2026-10-02 09:35:10",
+    "admin": "admin",
+    "action": "ACCEPT_RECHARGE",
+    "details": "Accepted recharge REC-1001 of ₹1,000.00 for UID 1677637. Credited to wallet."
+  }
+]

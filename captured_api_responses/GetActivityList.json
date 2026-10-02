@@ -1,0 +1,102 @@
+{
+  "data": {
+    "list": [
+      {
+        "bannerTitle": "🎉Agent Referral Bonus🎉",
+        "bannerID": 1,
+        "bannerUrl": "https://ossimg.dmfirst9acting.com/dmfirst/banner/Banner_202609102005424tpg.png",
+        "jumpType": 4,
+        "contents": "#/promotion/TeamPartner",
+        "accessAuthType": 0
+      },
+      {
+        "bannerTitle": "📱Download DMFIRST App Free 28 Rupee 📱",
+        "bannerID": 3,
+        "bannerUrl": "https://ossimg.dmfirst9acting.com/dmfirst/banner/Banner_20260915152933vws4.png",
+        "jumpType": 2,
+        "contents": "#/downloadCenter",
+        "accessAuthType": 0
+      },
+      {
+        "bannerTitle": "💰Lucky \"10\" Days Of Interest 💰",
+        "bannerID": 36,
+        "bannerUrl": "https://ossimg.dmfirst9acting.com/dmfirst/banner/Banner_2026091019074372sg.png",
+        "jumpType": 1,
+        "contents": "",
+        "accessAuthType": 0
+      },
+      {
+        "bannerTitle": "✨Invite Friend Bonus Up To 350,000✨",
+        "bannerID": 51,
+        "bannerUrl": "https://ossimg.dmfirst9acting.com/dmfirst/banner/Banner_20260911164445yope.jpg",
+        "jumpType": 2,
+        "contents": "#/main/InvitationBonus",
+        "accessAuthType": 0
+      },
+      {
+        "bannerTitle": "👥Referral Bonus👥",
+        "bannerID": 52,
+        "bannerUrl": "https://ossimg.dmfirst9acting.com/dmfirst/banner/Banner_20260911102846b9n6.png",
+        "jumpType": 2,
+        "contents": "#/main/InvitationBonus",
+        "accessAuthType": 0
+      },
+      {
+        "bannerTitle": "🎯Mission Bonus 🎯",
+        "bannerID": 53,
+        "bannerUrl": "https://ossimg.dmfirst9acting.com/dmfirst/banner/Banner_20260911102953vycc.png",
+        "jumpType": 2,
+        "contents": "#/activity/DailyTasks",
+        "accessAuthType": 0
+      },
+      {
+        "bannerTitle": "✨Member Wingo Winning Streak✨",
+        "bannerID": 54,
+        "bannerUrl": "https://ossimg.dmfirst9acting.com/dmfirst/banner/Banner_202609111030363t71.png",
+        "jumpType": 1,
+        "contents": "",
+        "accessAuthType": 0
+      },
+      {
+        "bannerTitle": "❗️ Mysterious Gift ❗️",
+        "bannerID": 55,
+        "bannerUrl": "https://ossimg.dmfirst9acting.com/dmfirst/banner/Banner_20260911103415lxk7.png",
+        "jumpType": 1,
+        "contents": "",
+        "accessAuthType": 0
+      },
+      {
+        "bannerTitle": "💳 First Deposit Bonus 💳",
+        "bannerID": 56,
+        "bannerUrl": "https://ossimg.dmfirst9acting.com/dmfirst/banner/Banner_20260911103502n7ha.png",
+        "jumpType": 2,
+        "contents": "#/activity/FirstRecharge",
+        "accessAuthType": 0
+      },
+      {
+        "bannerTitle": "📆 Get Daily Check-in Bonus 📆",
+        "bannerID": 57,
+        "bannerUrl": "https://ossimg.dmfirst9acting.com/dmfirst/banner/Banner_20260911103553c3x5.png",
+        "jumpType": 2,
+        "contents": "#/activity/DailySignIn",
+        "accessAuthType": 0
+      },
+      {
+        "bannerTitle": "🚀Aviator Fly High & Win Big🚀",
+        "bannerID": 58,
+        "bannerUrl": "https://ossimg.dmfirst9acting.com/dmfirst/banner/Banner_20260911171338i1fm.png",
+        "jumpType": 1,
+        "contents": "",
+        "accessAuthType": 0
+      }
+    ],
+    "pageNo": 1,
+    "totalPage": 1,
+    "totalCount": 11
+  },
+  "code": 0,
+  "msg": "Succeed",
+  "msgCode": 0,
+  "traceId": "",
+  "serviceNowTime": "2026-10-02 01:02:17"
+}

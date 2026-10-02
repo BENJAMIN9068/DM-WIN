@@ -1,0 +1,419 @@
+{
+  "data": {
+    "typelist": [
+      {
+        "payID": 26,
+        "payTypeID": 0,
+        "payName": "UPI-QR",
+        "paySysName": "UPI-QR",
+        "payNameUrl": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/payNameIcon_20260906211937pst5.png",
+        "payNameUrl2": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/payNameIcon2_20260906211938o53b.png",
+        "minPrice": 100,
+        "maxPrice": 50000,
+        "scope": "",
+        "typeName": "ArUpi Pay",
+        "typeNameCode": 9225,
+        "maxRechargeRifts": 0,
+        "minRechargeRifts": 0,
+        "sort": 100,
+        "vipRechargeRate": 0,
+        "quickConfig": [
+          {
+            "amount": 100,
+            "giftValue": 0
+          },
+          {
+            "amount": 500,
+            "giftValue": 0
+          },
+          {
+            "amount": 1000,
+            "giftValue": 0
+          },
+          {
+            "amount": 2000,
+            "giftValue": 0
+          },
+          {
+            "amount": 3000,
+            "giftValue": 0
+          },
+          {
+            "amount": 5000,
+            "giftValue": 0
+          },
+          {
+            "amount": 10000,
+            "giftValue": 0
+          },
+          {
+            "amount": 15000,
+            "giftValue": 0
+          },
+          {
+            "amount": 20000,
+            "giftValue": 0
+          },
+          {
+            "amount": 30000,
+            "giftValue": 0
+          },
+          {
+            "amount": 35000,
+            "giftValue": 0
+          },
+          {
+            "amount": 50000,
+            "giftValue": 0
+          }
+        ],
+        "hasArUpiPay": true
+      },
+      {
+        "payID": 3,
+        "payTypeID": 0,
+        "payName": "UPI x QR",
+        "paySysName": "UPI x QR",
+        "payNameUrl": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/payNameIcon_20260906212241jhrc.png",
+        "payNameUrl2": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/payNameIcon2_20260906212241hcvn.png",
+        "minPrice": 100,
+        "maxPrice": 50000,
+        "scope": "",
+        "typeName": "UPI x QR",
+        "typeNameCode": 0,
+        "maxRechargeRifts": 0,
+        "minRechargeRifts": 0,
+        "sort": 99,
+        "vipRechargeRate": 0,
+        "quickConfig": [
+          {
+            "amount": 100,
+            "giftValue": 0
+          },
+          {
+            "amount": 500,
+            "giftValue": 0
+          },
+          {
+            "amount": 1000,
+            "giftValue": 0
+          },
+          {
+            "amount": 2000,
+            "giftValue": 0
+          },
+          {
+            "amount": 3000,
+            "giftValue": 0
+          },
+          {
+            "amount": 5000,
+            "giftValue": 0
+          },
+          {
+            "amount": 10000,
+            "giftValue": 0
+          },
+          {
+            "amount": 15000,
+            "giftValue": 0
+          },
+          {
+            "amount": 20000,
+            "giftValue": 0
+          },
+          {
+            "amount": 30000,
+            "giftValue": 0
+          },
+          {
+            "amount": 35000,
+            "giftValue": 0
+          },
+          {
+            "amount": 50000,
+            "giftValue": 0
+          }
+        ],
+        "hasArUpiPay": false
+      },
+      {
+        "payID": 1,
+        "payTypeID": 0,
+        "payName": "E-Wallet",
+        "paySysName": "E-Wallet",
+        "payNameUrl": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/payNameIcon_20260906212359b9tm.png",
+        "payNameUrl2": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/payNameIcon2_20260906212359hana.png",
+        "minPrice": 100,
+        "maxPrice": 50000,
+        "scope": "",
+        "typeName": "E-Wallet",
+        "typeNameCode": 0,
+        "maxRechargeRifts": 0,
+        "minRechargeRifts": 0,
+        "sort": 98,
+        "vipRechargeRate": 0,
+        "quickConfig": [
+          {
+            "amount": 100,
+            "giftValue": 0
+          },
+          {
+            "amount": 500,
+            "giftValue": 0
+          },
+          {
+            "amount": 1000,
+            "giftValue": 0
+          },
+          {
+            "amount": 2000,
+            "giftValue": 0
+          },
+          {
+            "amount": 3000,
+            "giftValue": 0
+          },
+          {
+            "amount": 5000,
+            "giftValue": 0
+          },
+          {
+            "amount": 10000,
+            "giftValue": 0
+          },
+          {
+            "amount": 15000,
+            "giftValue": 0
+          },
+          {
+            "amount": 20000,
+            "giftValue": 0
+          },
+          {
+            "amount": 30000,
+            "giftValue": 0
+          },
+          {
+            "amount": 35000,
+            "giftValue": 0
+          },
+          {
+            "amount": 50000,
+            "giftValue": 0
+          }
+        ],
+        "hasArUpiPay": false
+      },
+      {
+        "payID": 5,
+        "payTypeID": 0,
+        "payName": "Paytm x QR",
+        "paySysName": "Paytm x QR",
+        "payNameUrl": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/payNameIcon_20260906212441kxgr.png",
+        "payNameUrl2": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/payNameIcon2_20260906212441qi3n.png",
+        "minPrice": 100,
+        "maxPrice": 50000,
+        "scope": "",
+        "typeName": "Paytm x QR",
+        "typeNameCode": 0,
+        "maxRechargeRifts": 0,
+        "minRechargeRifts": 0,
+        "sort": 97,
+        "vipRechargeRate": 0,
+        "quickConfig": [
+          {
+            "amount": 100,
+            "giftValue": 0
+          },
+          {
+            "amount": 500,
+            "giftValue": 0
+          },
+          {
+            "amount": 1000,
+            "giftValue": 0
+          },
+          {
+            "amount": 2000,
+            "giftValue": 0
+          },
+          {
+            "amount": 3000,
+            "giftValue": 0
+          },
+          {
+            "amount": 5000,
+            "giftValue": 0
+          },
+          {
+            "amount": 10000,
+            "giftValue": 0
+          },
+          {
+            "amount": 15000,
+            "giftValue": 0
+          },
+          {
+            "amount": 20000,
+            "giftValue": 0
+          },
+          {
+            "amount": 30000,
+            "giftValue": 0
+          },
+          {
+            "amount": 35000,
+            "giftValue": 0
+          },
+          {
+            "amount": 50000,
+            "giftValue": 0
+          }
+        ],
+        "hasArUpiPay": false
+      },
+      {
+        "payID": 11,
+        "payTypeID": 0,
+        "payName": "USDT-TRC20",
+        "paySysName": "USDT-TRC20",
+        "payNameUrl": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/payNameIcon_202609062125281c12.png",
+        "payNameUrl2": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/payNameIcon2_20260906212528trap.png",
+        "minPrice": 10,
+        "maxPrice": 100000,
+        "scope": "",
+        "typeName": "USDT",
+        "typeNameCode": 9205,
+        "maxRechargeRifts": 0,
+        "minRechargeRifts": 0,
+        "sort": 96,
+        "vipRechargeRate": 0,
+        "quickConfig": [
+          {
+            "amount": 10,
+            "giftValue": 0
+          },
+          {
+            "amount": 50,
+            "giftValue": 0
+          },
+          {
+            "amount": 100,
+            "giftValue": 0
+          },
+          {
+            "amount": 200,
+            "giftValue": 0
+          },
+          {
+            "amount": 500,
+            "giftValue": 0
+          },
+          {
+            "amount": 1000,
+            "giftValue": 0
+          },
+          {
+            "amount": 2000,
+            "giftValue": 0
+          },
+          {
+            "amount": 3000,
+            "giftValue": 0
+          },
+          {
+            "amount": 5000,
+            "giftValue": 0
+          },
+          {
+            "amount": 10000,
+            "giftValue": 0
+          },
+          {
+            "amount": 15000,
+            "giftValue": 0
+          },
+          {
+            "amount": 20000,
+            "giftValue": 0
+          }
+        ],
+        "hasArUpiPay": false
+      },
+      {
+        "payID": 21,
+        "payTypeID": 0,
+        "payName": "ARPay",
+        "paySysName": "ARPay",
+        "payNameUrl": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/payNameIcon_20260906212538lowo.png",
+        "payNameUrl2": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/payNameIcon2_20260906212538kxl9.png",
+        "minPrice": 100,
+        "maxPrice": 50000,
+        "scope": "",
+        "typeName": "AR Pay",
+        "typeNameCode": 9223,
+        "maxRechargeRifts": 0,
+        "minRechargeRifts": 0,
+        "sort": 95,
+        "vipRechargeRate": 0,
+        "quickConfig": [
+          {
+            "amount": 100,
+            "giftValue": 0
+          },
+          {
+            "amount": 500,
+            "giftValue": 0
+          },
+          {
+            "amount": 1000,
+            "giftValue": 0
+          },
+          {
+            "amount": 2000,
+            "giftValue": 0
+          },
+          {
+            "amount": 3000,
+            "giftValue": 0
+          },
+          {
+            "amount": 5000,
+            "giftValue": 0
+          },
+          {
+            "amount": 10000,
+            "giftValue": 0
+          },
+          {
+            "amount": 15000,
+            "giftValue": 0
+          },
+          {
+            "amount": 20000,
+            "giftValue": 0
+          },
+          {
+            "amount": 30000,
+            "giftValue": 0
+          },
+          {
+            "amount": 35000,
+            "giftValue": 0
+          },
+          {
+            "amount": 50000,
+            "giftValue": 0
+          }
+        ],
+        "hasArUpiPay": false
+      }
+    ]
+  },
+  "code": 0,
+  "msg": "Succeed",
+  "msgCode": 0,
+  "traceId": "",
+  "serviceNowTime": "2026-10-02 00:38:26"
+}

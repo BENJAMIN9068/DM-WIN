@@ -1,0 +1,49 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "升级礼包",
+      "description": "每个账号只能领取一次",
+      "integral": 0,
+      "balance": 60,
+      "rate": 0
+    },
+    {
+      "id": 2,
+      "name": "每月奖励",
+      "description": "每个账号每月只能领取一次",
+      "integral": 0,
+      "balance": 0,
+      "rate": 0
+    },
+    {
+      "id": 3,
+      "name": "充值奖励",
+      "description": "每次充值都可以获得奖励",
+      "integral": 0,
+      "balance": 0,
+      "rate": 0
+    },
+    {
+      "id": 4,
+      "name": "保险箱",
+      "description": "增加保险箱的额外收益",
+      "integral": 0,
+      "balance": 0,
+      "rate": 0.2
+    },
+    {
+      "id": 5,
+      "name": "洗码率",
+      "description": "增加洗码反水的额外收益",
+      "integral": 0,
+      "balance": 0,
+      "rate": 0.6
+    }
+  ],
+  "code": 0,
+  "msg": "Succeed",
+  "msgCode": 0,
+  "traceId": "",
+  "serviceNowTime": "2026-10-02 00:38:36"
+}

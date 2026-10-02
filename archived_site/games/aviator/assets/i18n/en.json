@@ -1,0 +1,808 @@
+{
+  "canvas": {
+    "flew_away": "FLEW AWAY!"
+  },
+  "game": {
+    "bet-controls": {
+      "bet-control": {
+        "Auto bet": "Auto bet",
+        "auto cashout": "Auto Cash Out",
+        "Auto Play": "Auto Play"
+      },
+      "auto-play": {
+        "Auto play options": "Auto play options",
+        "Number of Rounds:": "Number of Rounds:",
+        "Stop if cash decreases by": "Stop if cash decreases by",
+        "Stop if cash increases by": "Stop if cash increases by",
+        "Stop if single win exceeds": "Stop if single win exceeds",
+        "Reset": "Reset",
+        "Start": "Start",
+        "Bet amount": "Bet amount",
+        "Autoplay total amount:": "Autoplay total amount:",
+        "Start Auto": "Start Auto"
+      }
+    },
+    "bets-widget": {
+      "All Bets": "All Bets",
+      "Previous": "Previous",
+      "Round Result": "Round Result",
+      "Bet": "Bet",
+      "Bets": "Bets",
+      "Top": "Top",
+      "Total win": "Total win",
+      "date": "Date",
+      "Player": "Player",
+      "fairness": "Fairness",
+      "Win": "Win",
+      "Result": "Result",
+      "Round max.": "Round max.",
+      "top": {
+        "Date & Time": "Date & Time",
+        "X": "X",
+        "Win": "Win",
+        "Rounds": "Rounds",
+        "Day": "Day",
+        "Month": "Month",
+        "Year": "Year"
+      }
+    },
+    "chat-widget": {
+      "Rules": "Rules",
+      "New messages": "New messages",
+      "Total:": "Total:",
+      "Rain": "Rain",
+      "Claim": "Claim",
+      "Claimed": "Claimed",
+      "Expired": "Expired",
+      "Number of players": "Number of players",
+      "Amount per player": "Amount per player",
+      "chat-message": {
+        "Good job! 😮": "Good job! 😮",
+        "Wow! 😮": "Wow! 😮",
+        "Awesome! 🌟": "Awesome! 🌟",
+        "Cool! 😎": "Cool! 😎",
+        "That's huge! 🛩": "That's huge! 🛩",
+        "Congratulations 👏": "Congratulations 👏",
+        "Best in this round with HUGE WIN! 👏": "Best in this round with HUGE WIN! 👏",
+        " made a rain! 🌧😊": " made a rain! 🌧😊",
+        "Free bets for everyone! 😊": "Free bets for everyone! 😊",
+        "chat-message-ban": {
+          "you": " You",
+          "have been": " have been",
+          "has been": " has been",
+          "banned-other": " banned",
+          "banned-me": " banned",
+          "from chat for": " from chat for",
+          "day": " d",
+          "hour": " h",
+          "min": " m",
+          "sec": " s",
+          "reason": ". Reason: ",
+          "strong language": "Strong language",
+          "spam": "Spam"
+        }
+      },
+      "chat-input": {
+        "please wait": "Spam filter...",
+        "chat-input-tools": {
+          "chat-input-tool-emoji": {
+            "search emoji": "Search emoji...",
+            "favorites": "Favorites",
+            "people": "People",
+            "nature": "Nature",
+            "objects": "Objects",
+            "places": "Places",
+            "symbols": "Symbols"
+          },
+          "chat-input-tool-rain": {
+            "description": "This feature will give selected amount to random users in chat.",
+            "amount per player": "Amount per player,",
+            "number of players": "Number of players"
+          }
+        }
+      }
+    }
+  },
+  "shared": {
+    "acknowledge": "Acknowledge",
+    "animation": "Animation",
+    "archive": "Archive",
+    "auto": "Auto",
+    "avatar": "Avatar",
+    "back": "Back",
+    "bet": "Bet",
+    "cancel": "Cancel",
+    "cash_out": "Cash out",
+    "cashed_out": "Cashed out",
+    "Challenge Tickets": "Challenge Tickets",
+    "change": "Change",
+    "CHANGE": "CHANGE",
+    "claim": "Claim",
+    "CLAIM": "CLAIM",
+    "close": "Close",
+    "Game Room: Room #": "Game Room: Room #{{value}}",
+    "Room #": "Room #{{value}}",
+    "multiplier": "Multiplier",
+    "continue": "Continue",
+    "emoji": "Emoji",
+    "End balance": "End balance",
+    "free_bets": "Free bets",
+    "game_limits": "Game limits",
+    "game_rules": "Game rules",
+    "home": "Home",
+    "how_to_play": "How to play",
+    "load_more": "Load more",
+    "music": "Music",
+    "my_bet_history": "My bet history",
+    "notification": "Notification",
+    "Other_Settings": "Other Settings",
+    "provably_fair_settings": "Provably Fair settings",
+    "rain": "Rain",
+    "random": "Random",
+    "reply": "Reply",
+    "round": "Round",
+    "round_history": "Round History",
+    "save": "Save",
+    "Settings": "Settings",
+    "sound": "Sound",
+    "Start_balance": "Start balance",
+    "stop": "Stop",
+    "thank_you_for_playing": "Thank you for playing",
+    "This_functionality_is_disabled": "This functionality is disabled",
+    "total": "Total",
+    "WAITING_FOR_NEXT_ROUND": "WAITING FOR NEXT ROUND",
+    "waiting_for_next_round": "Waiting for next round",
+    "watch": "Watch",
+    "what_is_provably_fair": "What is Provably Fair",
+    "win": "Win",
+    "Connection...": "Connection...",
+    "modals": {
+      "free-bets-management": {
+        "title": "FREE BETS MANAGEMENT",
+        "play with cash": "Play with cash",
+        "active free bets": "ACTIVE FREE BETS",
+        "quantity": "Quantity",
+        "granted": "Granted:",
+        "min cashout coefficient": "Min. cash out multiplier:",
+        "expires": "Expires:",
+        "no active free bets": "No Active Free Bets. Yet!",
+        "nothing yet": "Nothing yet"
+      },
+      "fairness": {
+        "server seed": "Server Seed:",
+        "server tip": "Generated on our side",
+        "client seed": "Client Seed:",
+        "client tip": "Generated on players side",
+        "player": "Player N{{value}}:",
+        "seed": "Seed:",
+        "not enough": "Not enough players",
+        "hash": "Combined SHA512 Hash:",
+        "hash tip": "Above seeds combined and converted to SHA512 Hash. This is your game result",
+        "hex": "Hex:",
+        "decimal": "Decimal:",
+        "result": "Result:",
+        "help": "For instructions check"
+      },
+      "fairness-settings": {
+        "tooltip": {
+          "text": "This game uses Provably Fair technology to determine game result. This tool gives you ability to change your seed and check fairness of the game."
+        },
+        "seed-change": {
+          "change seed": "CHANGE SEED",
+          "enter new seed": "Enter new seed:"
+        },
+        "alert": "You can`t change seed while bet is active",
+        "client-part": {
+          "title": "Client (your) seed:",
+          "text": "Round result is determined form combination of server seed and first 3 bets of the round.",
+          "random": "Random on every new game",
+          "current": "Current:",
+          "manual": "Enter manually"
+        },
+        "server seed": "Server seed SHA256:",
+        "bottom": "You can check fairness of each bet from bets history"
+      },
+      "game-avatar": {
+        "title": "CHANGE AVATAR"
+      },
+      "Change Room": {
+        "title": "CHANGE ROOM",
+        "text": "Changing the room will restart the game. Do you wish to continue?"
+      },
+      "rules": {
+        "game-rules": {
+          "main-text": "Aviator is a new generation of iGaming entertainment. You can win many times more, in seconds! Aviator is built on a provably fair system, which is currently the only real guarantee of honesty in the gambling industry.",
+          "main-text-neutral": "This game is a new generation of iGaming entertainment. You can win many times more, in seconds! The game is built on a provably fair system, which is currently the only real guarantee of honesty in the gambling industry.",
+          "link": "Read more about provably fair system",
+          "steps": {
+            "title": "Aviator is as easy to play as 1-2-3:",
+            "title-neutral": "The game is as easy to play as 1-2-3:",
+            "first-step": " before take-off",
+            "second-step": " as your Lucky Plane takes off and your winnings increase.",
+            "third-step": "before the plane disappears and wins X times more!",
+            "text": "But remember, if you did not have time to Cash Out before the Lucky Plane flies away, your bet will be lost. Aviator is pure excitement! Risk and win. It’s all in your hands!",
+            "text-neutral": "But remember, if you did not have time to Cash Out before the Lucky Plane flies away, your bet will be lost. The game is pure excitement! Risk and win. It’s all in your hands!"
+          },
+          "details": {
+            "title": "More details",
+            "point1": "The win multiplier starts at 1x and grows more and more as the Lucky Plane takes off.",
+            "point2": "Your winnings are calculated at the multiplier at which you made a Cash Out, multiplied by your bet.",
+            "point3": "Before the start of each round, our provably fair random number generator generates the multiplier at which the Lucky Plane will fly away. You can check the honesty of this generation by clicking on {{icon}} icon in the Top tab.",
+            "multiplierFormula": "The multiplier increase speed varies and can be determined using the formula: multiplier = {{multiplierFormula}}"
+          },
+          "game-functions": {
+            "title": "GAME FUNCTIONS",
+            "bet-cashout": {
+              "title": "Bet & Cash Out",
+              "point1": "Select an amount and press the “Bet” button to make a bet.",
+              "point2": "You can make two bets simultaneously, by adding a second bet panel. To add a second bet panel, press the plus icon, which is located on the top right corner of the first bet panel.",
+              "point3": "Press the “Cash Out” button to cash out your winnings. Your win is your bet multiplied by the Cash Out multiplier.",
+              "point4": "Your bet is lost, if you didn’t cash out before the plane flies away.",
+              "point4-example-1": "For example:",
+              "point4-example-2": "If the plane crashes at a multiplier of 1.25x, it means the multiplier reached 1.24x and then crashed.",
+              "point4-example-3": "1.25x is considered the crash multiplier. If you set auto cashout at 1.25x, your bet will be lost because the plane crashed just before reaching the auto cashout point.",
+              "point4-example-4": "Always make sure to cash out before the crash multiplier to secure your winnings!",
+              "point5": "You can cancel the bet by pressing the \"Cancel\" button if the round has not yet started.",
+              "point6": "Adjust the bet size using the \"+\" and \"-\" buttons to change the bet amount. Alternatively, you can select the bet size using the preset values or enter a value manually."
+            },
+            "auto-play-auto-cashout": {
+              "title": "Auto Play & Auto Cash Out",
+              "point1": "Auto Play is activated from the “Auto” tab on the Bet Panel, by pressing the “Auto Play” button.",
+              "point2": "In the Auto Play Panel, the “Stop if cash decreases by” option stops Auto Play, if the balance is decreased by the selected amount.",
+              "point3": "In the Auto Play Panel, the “Stop if cash increases by” option stops Auto Play, if the balance is increased by the selected amount.",
+              "point4": "In the Auto Play Panel, the “Stop if single win exceeds” option stops Auto Play, if a single win exceeds the selected amount.",
+              "point5": "Auto Cash Out is available from the “Auto” tab on the Bet panel. After activation, your bet will be automatically cashed out when it reaches the multiplier entered.",
+              "point6": "Auto Play is activated from the “Auto” tab in the Bet Panel, by checking the “Auto Bet” checkbox. After activation, bets will be placed automatically, but for Cash Out, you should press the “Cash Out” button in each round. If you want the bet to cash out automatically, then use the “Auto Cash Out” option.",
+              "point5-detailed": "Auto Cash Out is available from the ‘Auto’ tab on the Bet panel. After activation, your bet will be automatically cashed out when it reaches the multiplier entered. If the plane takes off exactly when the multiplier matches the one you've chosen for automatic cashout, the round is counted as a loss. For example, if the automatic cashout multiplier is set at 1.5x and the plane takes off at that same 1.5x multiplier, the round is lost.",
+              "point7": "Before starting Auto Play, select the bet size you want to play with. How to do this is described in the Bet & cash out section.",
+              "point8": "When configuring Auto Play, choose the number of rounds from the provided options, and one or more stop conditions such as \"Stop if balance decreases by\", \"Stop if balance increases by\", \"Stop if single win exceeds\".",
+              "point9": "You can stop Auto Play by pressing the Stop button.",
+              "point10": "When configuring Auto Play, choose the number of rounds from the provided options after which Auto Play will automatically stop.",
+              "point11": "You can also change the bet amount, which will be automatically placed for the selected number of rounds. "
+            },
+            "live-bets-statistics": {
+              "title": "Live Bets & Statistics",
+              "point1": "On the left side of the game interface (or under the Bet Panel on mobile), is located the Live Bets panel. Here you can see all bets that are being made in the current round.",
+              "point2": "Share round results by clicking the {{icon}} and pasting into the chat.",
+              "point3": "In the “Top” panel, game statistics are located. You can browse wins by amount, or Cash Out multiplier, and see the biggest round multipliers."
+            },
+            "in-game-chat": {
+              "title": "In-Game Chat",
+              "point1": "On the right side of the game interface (or after pressing the Chat icon, on the top right corner of the mobile interface), the Chat Panel is located. In Chat, you can communicate with other players. Also, information about huge wins is posted in the Chat automatically."
+            },
+            "free-bets": {
+              "point1": "You can check the status of Free Bets, from the Game Menu > Free Bets. Free Bets are awarded by the operator, or by the Rain Feature."
+            },
+            "rain-feature": {
+              "title": "Rain Feature",
+              "point1": "The operator can drop Free Bets into the chat through the Rain feature. To claim these Free Bets, just press the “Claim” button when they appear in the chat.",
+              "point2": "Players can drop Free Bets for others using the “Rain” panel. To share Free Bets, press the “Rain” button at the bottom of the chat. Other players can grab them by pressing the “Claim” button."
+            },
+            "randomization": {
+              "title": "Randomisation",
+              "point1": "The multiplier for each round is generated by a “Provably Fair” algorithm and is completely transparent, and 100% fair. ",
+              "point2": "You can check and modify the Provably Fair settings from the Game menu > Provably Fair settings.",
+              "point3": "You can check the fairness of each round by pressing {{icon}} icon, opposite the results in the “My Bets” or inside “Top” tabs."
+            },
+            "minimum_bet_value": {
+              "title": "Minimum bet value",
+              "point1": "The minimum bet value for this game is {{minBankValue}} {{currency}} (minimal bet multiplied by 1.01)."
+            },
+            "return-to-player": {
+              "title": "Return to Player",
+              "point1": "The overall theoretical return to player is {{returnToPlayer}}%."
+            },
+            "game-menu": {
+              "title": "Game Menu",
+              "point1": "Access the game menu by tapping the menu button in the top right corner of the screen.",
+              "point2": "Toggle the \"Sound\" switch to turn the game sounds on or off.",
+              "point3": "Toggle the \"Music\" switch to turn the background music on or off.",
+              "point4": "Toggle the \"Animation\" switch to turn the airplane animation on or off.",
+              "point5": "Press the \"Limits\" button to view the limits for minimum and maximum bets, as well as the maximum win limit.",
+              "point6": "Press the \"My Bets History\" button to view the history of your bets",
+              "point7": "Open \"Game Rules\" to read detailed rules of the game"
+            },
+            "multi-rooms": {
+              "title": "Multi Rooms",
+              "point1": "At the start of each game session, players are randomly assigned to one of the available rooms and stay in that room until the session ends. The player can change the game room by selecting one from the available options in the “Game Room” section of the game menu.",
+              "point2": "Each room generates round results independently, using unique Server and Players Seed settings to guarantee Provably Fair results."
+            },
+            "other": {
+              "title": "Other",
+              "point1": "If the internet connection is interrupted when the bet is active, the game will auto cash out with the current multiplier, and the winning amount will be added to your balance.",
+              "point1Version2": "If the internet connection is interrupted while the bet is active, the bet will be lost, unless the cash out or the maximum win amount has been reached.",
+              "point2": "In the event of a malfunction of the gaming hardware/software, all affected game bets and payouts are rendered void and all affected bets are refunded.",
+              "unfinished game": "Unfinished game will be automatically cashed out.",
+              "max_win": "Game will automatically cash out if your win will reach {{maxWin}} {{currency}} or more.",
+              "inactivityTime": "If players remain inactive for more than {{min}} minutes, the system will automatically terminate the session of the inactive player."
+            },
+            "version": "Version"
+          }
+        }
+      },
+      "provably-fair": {
+        "slogan": "100% FAIR GAME",
+        "top text": "\"Aviator\" is based on cryptographic technology called \"Provably Fair\". This technology guarantees 100% fairness of game result. With this technology, it's impossible for any third party to interfere in game process.",
+        "top text-neutral": "This game is based on cryptographic technology called \"Provably Fair\". This technology guarantees 100% fairness of game result. With this technology, it's impossible for any third party to interfere in game process.",
+        "How does it work": "How it works",
+        "Simple": "Quick explanation:",
+        "text1": "Result of each round (Game's \"Fly away\" multiplier ) is not generated on our servers. It's generated with help of round players and is fully transparent. This way, it's impossible for anyone to manipulate game output. Also, anyone can check and confirm game fairness",
+        "more": "More information:",
+        "text2-1": "Round result is generated from four independent participants of the round: game operator and first 3 betters of the round. Operator is generating server seed (random 16 symbols). Hashed version of this server seed is available publicly before round starts",
+        "text2-2": "(In user menu, check \"Provably Fair Settings\" and then \"Next server seed SHA256\")",
+        "text2-3": "Client seed is generated on the side of each player and when round starts first 3 betters are participating in generating round result. ",
+        "text2-4": "When round starts, game merges server seed with three client seeds. From merged symbols is generated SHA512 hash, and from this hash - game result.",
+        "video title": "How to check",
+        "stats-1": "You can check fairness of each round from game history, by clicking on green icon.",
+        "stats-2": "In opened window, you will see server seed, 3 pair of players seeds, combined hash and round result.",
+        "settings-1": "Hashed version of next rounds server seed is available publicly in settings window (In user menu, check \"Provably Fair Settings\" and then \"Next server seed SHA256\").",
+        "settings-2": "You can also change your client seed here.",
+        "settings-3": "If you want to participate in round result generation, make sure you are between first 3 players who make bet in that round."
+      },
+      "quick-help": {
+        "step1": "Make a bet, or even two at same time and wait for the round to start.",
+        "step2": "Look after the lucky plane. Your win is bet multiplied by a coefficient of lucky plane.",
+        "step3": "Cash Out before plane flies away and money is yours!",
+        "details": "detailed rules"
+      },
+      "game-limits": {
+        "min-bet": "Minimum bet",
+        "max-bet": "Maximum bet",
+        "max-win-one-bet": "Maximum win for one bet",
+        "Maximum Multiplier, X:": "Maximum Multiplier, X:"
+      },
+      "other_settings": {
+        "title": "OTHER SETTINGS",
+        "Hide_My_Activity": "Hide My Activity",
+        "Hide_Live_Bets_and_Statistics": "Hide Live Bets and Statistics"
+      },
+      "notification": {
+        "account_history": "Account history",
+        "alderney_message": "This game is tested by certified laboratory, licensed by UKGC, MGA and other authorities.\nGame are not regulated or monitored by the Alderney Gambling Control Commission, and AGCC is not obliged to act upon any complaints."
+      }
+    },
+    "components": {
+      "connector": {
+        "reconnect": "Trying to connect...",
+        "slow connection": "Slow connection"
+      },
+      "disconnect-message": {
+        "text": "You have been disconnected. Check connection and refresh your browser, or go back to landing page",
+        "For your region, the game can only be played with {{allowedCurrencies}} currency(ies)": "For your region, the game can only be played with {{allowedCurrencies}} currency(ies)",
+        "Sorry, the game is not available in your region": "Sorry, the game is not available in your region",
+        "Session ended. The game was opened in another browser window.": "Session ended. The game was opened in another browser window."
+      }
+    },
+    "ui-components": {
+      "toastr": {
+        "toastr-message": {
+          "Action refused via suspicious activity": "Action refused via suspicious activity",
+          "New seed not saved!": "New seed not saved!",
+          "New seed saved!": "New seed saved!",
+          "This bet has already been added": "This bet has already been placed",
+          "Not enough balance": "Not enough balance",
+          "Bad request": "Bad request",
+          "Bet exists": "Bet exists",
+          "Free bet is not ready to cash out": "Free bet is not ready to cash out",
+          "Bet is already cashed out": "Bet is already cashed out",
+          "Free bet is not found": "Free bet is not found",
+          "No free bets left": "No free bets left",
+          "Stage time out": "Stage time out",
+          "Something went wrong": "Something went wrong",
+          "You have cashed out!": "You have cashed out!",
+          "Bet {{betId}} has been cashed out!": "Bet {{betId}} has been cashed out!",
+          "Low balance": "Low Balance",
+          "chat-low-balance": "To use chat, your balance should not be 0",
+          "Free bet has expired": "Free bet has expired",
+          "No free bets remaining": "No free bets remaining",
+          "Rain can't be claimed": "Rain can't be claimed",
+          "Rain place not found": "Rain place not found",
+          "Anti spam delay time has not expired": "Anti spam delay time has not expired",
+          "copied": "Copied!",
+          "copied-for-chat": "Copied for chat!",
+          "rain-has-been-dropped": "🌧Rain has been dropped. Get your part fast! →",
+          "Please, set number of rounds": "Please, set number of rounds",
+          "Can't set 0.00 as stop point": "Can't set 0.00 as stop point",
+          "Please, specify decrease or exceed stop point": "Please, specify decrease or exceed stop point",
+          "Loss limit has been reached": "Loss limit has been reached",
+          "Daily loss limit has been reached": "Daily loss limit has been reached",
+          "Weekly loss limit has been reached": "Weekly loss limit has been reached",
+          "Monthly loss limit has been reached": "Monthly loss limit has been reached",
+          "Yearly loss limit has been reached": "Yearly loss limit has been reached",
+          "Min wager in the last {{duration}} min. should be {{amount}} {{currency}}": "Min wager in the last {{duration}} min. should be {{amount}} {{currency}}",
+          "Not enough balance. Min. balance {{minBalance}} {{currency}}": "Not enough balance. Min. balance {{minBalance}} {{currency}}",
+          "Your freebet was canceled by the administrator": "Your freebet was canceled by the administrator.",
+          "You have not been active for a while. Place a bet to avoid a disconnection.": "You have not been active for a while. Place a bet to avoid a disconnection.",
+          "You can claim up to {amount} freebets within the promo": "You can claim up to {{amount}} freebets within the promo",
+          "You can claim up to {amount} freebets within {duration} days": "You can claim up to {{amount}} freebets within {{duration}} days",
+          "You can claim up to {amount} freebets within {duration} hours": "You can claim up to {{amount}} freebets within {{duration}} hours",
+          "You can claim up to {amount} freebets within {duration} minutes": "You can claim up to {{amount}} freebets within {{duration}} minutes",
+          "You already have a ticket for this challenge": "You already have a ticket for this challenge",
+          "Last chance to place a bet. Your session will be terminated due to inactivity.": "Last chance to place a bet. Your session will be terminated due to inactivity.",
+          "You've got a Free Bet!": "You've got a Free Bet!",
+          "You have reached the Maximum Win amount!": "You have reached the Maximum Win amount!",
+          "To claim the free bet your minimum wager from the last {duration} minutes must be at least {amount} {currency}.": "To claim the free bet your minimum wager from the last {{duration}} minutes must be at least {{amount}} {{currency}}.",
+          "To claim the free bet your minimum balance must be at least {amount} {currency}.": "To claim the free bet your minimum balance must be at least {{amount}} {{currency}}.",
+          "Message blocked due to prohibited content or spam detection.": "Message blocked due to prohibited content or spam detection.",
+          "The selected room is unavailable. You have been connected to another room.": "The selected room is unavailable. You have been connected to another room.",
+          "Too many requests": "Too many requests"
+        }
+      },
+      "free-bet": {
+        "Free bets available:": "Free bets available:",
+        "All free bets spent!": "All free bets spent!",
+        "Minimum cashout multiplier:": "Min. cash out:",
+        "Manage": "Manage"
+      }
+    },
+    "date": {
+      "month": {
+        "Jan": "Jan",
+        "Feb": "Feb",
+        "Mar": "Mar",
+        "Apr": "Apr",
+        "May": "May",
+        "Jun": "Jun",
+        "Jul": "Jul",
+        "Aug": "Aug",
+        "Sep": "Sep",
+        "Oct": "Oct",
+        "Nov": "Nov",
+        "Dec": "Dec"
+      }
+    }
+  },
+  "action": {
+    "Bet {{betId}}": "Bet {{betId}}",
+    "Cash Out": "Cash Out"
+  },
+  "challenges": {
+    "Active": "Active",
+    "Archive": "Archive",
+    "Guaranteed": "Guaranteed",
+    "How to play": "How to play?",
+    "Tasks": "Tasks",
+    "Tickets": "Tickets",
+    "Start:": "Start:",
+    "End:": "End:",
+    "Players": "Players",
+    "Scored": "Scored",
+    "By joining the event, you are agreeing to the:": "By joining the event, you are agreeing to the:",
+    "Leaderboard": "Leaderboard",
+    "No players yet :(": "No players yet :(",
+    "You can be one of the first!": "You can be one of the first!",
+    "Total Players": "Total Players",
+    "Total Prizes": "Total Prizes",
+    "Detailed rules": "Detailed rules",
+    "Other Information": "Other Information",
+    "Min. Bet:": "Min. Bet:",
+    "Prizes": "Prizes",
+    "Left": "Left",
+    "Points scored": "Points Scored",
+    "About Points": "About Points",
+    "Points Mult.": "Points Mult.",
+    "Yes": "Yes",
+    "Position": "Position",
+    "Place": "Place",
+    "Prize pool": "Prize pool",
+    "Show all": "Show all",
+    "No Active Tickets. Yet!": "No Active Tickets. Yet!",
+    "No Archive Tickets. Yet!": "No Archive Tickets. Yet!",
+    "Joining the Challenge requires Ticket": "Joining the Challenge requires Ticket",
+    "CASH PRIZE": "CASH PRIZE",
+    "Cash Prize": "Cash Prize",
+    "Tournament": "Tournament",
+    "Mission": "Mission",
+    "action": {
+      "Back to top": "Back to top",
+      "Take my Prize": "Take my Prize",
+      "Join": "Join"
+    },
+    "challengeDetailsMessages": {
+      "MISSION": {
+        "You have successfully joined the xMission. Wait for the start.": "🥳 You have successfully joined the Mission. Wait for the start.",
+        "You've already claimed your prize! See you at the next challenge": "You've already claimed your prize! See you at the next challenge 😊",
+        "Oops! The xMission is paused. It will be resumed shortly": "Oops! The Mission is paused. It will be\nresumed shortly 😕",
+        "xMission is over! See you at the next challenge": "Mission is over! See you at the next challenge 😊",
+        "xMission is over! Try harder next time!": "Mission is over! 😕\nTry harder next time!",
+        "Your bet is below the {{amount}} {{currency}} minimum for the xMission! Progress is paused.": "Your bet is below the {{amount}} {{currency}} minimum for the Mission! Progress is paused."
+      },
+      "TOURNAMENT": {
+        "You have successfully joined the xTournament. Wait for the start.": "🥳 You have successfully joined the Tournament. Wait for the start.",
+        "You've already claimed your prize! See you at the next challenge": "You've already claimed your prize! See you at the next challenge 😊",
+        "Oops! The xTournament is paused. It will be resumed shortly": "Oops! The Tournament is paused. It will be\nresumed shortly 😕",
+        "xTournament is over! See you at the next challenge": "Tournament is over! See you at the next challenge 😊",
+        "xTournament is over! Try harder next time!": "Tournament is over! 😕\nTry harder next time!",
+        "Your bet is below the {{amount}} {{currency}} minimum for the xTournament! Progress is paused.": "Your bet is below the {{amount}} {{currency}} minimum for the Tournament! Progress is paused."
+      }
+    },
+    "howToPlay": {
+      "xMission": {
+        "title": "How to play?",
+        "Welcome": "Welcome to the Mission! Get ready to embark on thrilling challenges and earn amazing rewards.",
+        "Here’s how it works:": "Here's how it works:",
+        "joinTheChallenge": {
+          "title": "Join the Mission",
+          "text": "When a Mission is announced, simply click the “Join” button to confirm your participation. Make sure you don’t miss out!"
+        },
+        "taskProgress": {
+          "title": "Task Progress",
+          "text": "Once the Mission begins, you’ll see a progress bar that tracks your task completion. Play the game and execute the specific tasks assigned to the Mission."
+        },
+        "fightForYourPrize": {
+          "title": "Fight for your Prize",
+          "text": "Hurry up! The time is limited, so you need to complete the Mission in time to get the prize.",
+          "textPrizeFundLimited": "Hurry up! The prize fund for the Mission is limited, so the faster you complete all the tasks, the better chance you have to claim your rewards."
+        },
+        "challengeCompletion": {
+          "title": "Mission completion",
+          "text": "Once you’ve successfully finished all the tasks for the Mission, you will be eligible to receive your prizes. Exciting, isn’t it?"
+        },
+        "Join the xMission, play your best, and aim to be one of the winners. Good luck on your xMission!": "Join the Mission, play your best, and aim to be one of the winners. Good luck on your Mission!",
+        "Detailed rules": "Detailed rules"
+      },
+      "xTournament": {
+        "title": "How to play?",
+        "Welcome": "Welcome to the Tournament! Get ready to embark on thrilling challenges and earn amazing rewards.",
+        "Here’s how it works:": "Here's how it works:",
+        "joinTheChallenge": {
+          "title": "Join the Tournament",
+          "text": "When a Tournament is announced, simply click the \"Join\" button to confirm your participation. Make sure you don't miss out!"
+        },
+        "taskProgress": {
+          "title": "Task Progress",
+          "text": "Once the Tournament begins, you'll see a score bar that tracks your points. Play the game and execute the specific tasks assigned to the Tournament."
+        },
+        "fightForYourPrize": {
+          "title": "Fight for your Prize",
+          "text": "Hurry up! The prize fund for the Tournament is split between finishing places, so the more points you gain, the better chance you have to win the prize."
+        },
+        "challengeCompletion": {
+          "title": "Tournament completion",
+          "text": "Once the Tournament is ended and finishing places are decided, you may be eligible to receive your prizes. Exciting, isn't it?"
+        },
+        "Join the xTournament, play your best, and aim to be one of the winners. Good luck on your xTournament!": "Join the Tournament, play your best, and aim to be one of the winners. Good luck on your Tournament!",
+        "Detailed rules": "Detailed rules"
+      }
+    },
+    "challengeRules": {
+      "xMission": {
+        "title": "Mission Rules",
+        "stepInto": "Enter the world of Spribe Missions, where thrilling challenges and tasks await you. Complete them in time to earn your rewards. It's your personal race against time with enticing prizes up for grabs. Join now, accomplish your mission, and claim your reward!",
+        "rules": {
+          "title": "Rules",
+          "point1": "To participate in the Mission, click the \"Join\" button and wait for the mission to commence.",
+          "point2": "To complete the mission, fulfill all the tasks in time.",
+          "point3": "Engage in Mission tasks, ensuring all actions and bets comply with the mission rules and active timeframes.",
+          "point4": "Only bets made with the selected currency will count toward the Mission.",
+          "point5": "If an action fulfills the requirements of multiple tasks, it contributes to the success of all those tasks.",
+          "point6": "You can use Free Bets in addition to basic bets when participating in missions.",
+          "point7": "If the operator cancels the mission before its completion, it is considered finished at the time of cancellation, and prizes will be awarded to all players who have met the mission conditions.",
+          "point8": "The Mission may be paused due to technical issues or other unforeseen circumstances.",
+          "point9": "While paused, progress will be on hold, and actions will not count toward completion.",
+          "point10": "The operator reserves the right to cancel the Mission due to technical issues or other unforeseen circumstances.",
+          "point11": "The operator may choose to distribute some or all prizes manually, at the operator’s discretion and in accordance with the platform’s terms and conditions."
+        },
+        "tasks": {
+          "title": "Tasks",
+          "beforeYouBegin": "Before you begin, review the Mission requirements:",
+          "WIN_MONEY_IN_TOTAL": "To complete this task, the player should reach a total winning payout of {{goal}} {{currency}}.",
+          "CATCH_MULTIPLIERS": "To complete this task, you must land a single win with a multiplier of at least {{targetMinMultiplier}}x in one round.",
+          "BET_IN_TOTAL": "To complete this task, the player should reach a total betting amount of {{goal}} {{currency}}.",
+          "COLLECT_CASH_OUTS_MULTIPLIER_SUM": "To complete this task, the player should reach a combined total of {{goal}}x from all their winning multipliers.",
+          "NET_PROFIT_IN_TOTAL": "To complete this task, the player should reach a total net profit of {{goal}} {{currency}} (total win amount minus total bet amount).",
+          "PLACE_BETS": "To complete this task, the player should place a total of {{goal}} individual bets.",
+          "The bet should be at least minBet currency.": "The bet should be at least {{minBet}} {{currency}}."
+        },
+        "prizes": {
+          "title": "Prizes",
+          "point1": "To claim a prize, complete the Mission before it ends.",
+          "point2": "After successfully completing all Mission tasks within the given timeframe, you can claim your prize by clicking the \"Take my prize\" button.",
+          "point2-1": "Challenge progress is updated only while the challenge is active. As soon as the prize pool is depleted or the time expires, progress stops updating.",
+          "point3": "If you win a prize but don't claim it, it will be added to your account automatically after the Mission ends.",
+          "point3-1": "The time of receipt for the Special Prize may vary depending on the operator. Please contact your casino provider for more information.",
+          "point4": "If the operator cancels the Mission before its completion, it will be considered finished at the time of cancellation, and prizes will be awarded to all players who have met the Mission conditions."
+        },
+        "pleaseNote": "Please note the minimum bet size required for Mission participation. Ensure your bet meets or exceeds this specified threshold to qualify."
+      },
+      "xTournament": {
+        "title": "Tournament Rules",
+        "stepInto": "Step into the world of Spribe Tournaments, where you'll take on thrilling challenges and tasks. Score as much points as you can and dominate leaderboard. It's a race against time and other players with exciting prizes up for grabs. Join now and showcase your skills!",
+        "rules": {
+          "title": "Rules",
+          "point1": "To participate in the Tournament, click the \"Join\" button and wait for the challenge to commence.",
+          "point2": "To win the Tournament, collect points by completing tasks and move up the leaderboard to earn the best prize.",
+          "point3": "Only bets made with the selected currency will count toward the Tournament.",
+          "point4": "You can use Free Bets in addition to basic bets when participating in the Tournament.",
+          "point5": "The Tournament may be paused due to technical issues or other unforeseen circumstances.",
+          "point6": "While paused, progress will be on hold, and actions will not count toward completion.",
+          "point7": "The operator reserves the right to cancel the Tournament due to technical issues or other unforeseen circumstances.",
+          "point8": "The operator may choose to distribute some or all prizes manually, at the operator’s discretion and in accordance with the platform’s terms and conditions."
+        },
+        "pointsMultiplier": {
+          "title": "Points Multiplier",
+          "description": "The bigger your bet, the bigger your boost! Higher bets unlock higher points multipliers. Check the bet ranges below to see your current multiplier.",
+          "From": "From",
+          "To": "To",
+          "Points Mult.": "Points Mult.",
+          "Max Bet": "Max Bet"
+        },
+        "tasks": {
+          "title": "Tasks",
+          "beforeYouBegin": "Before you begin, review the Tournament requirements:",
+          "WIN_MONEY_IN_TOTAL": "The winner is the player with the highest total amount of money won. Cashouts must be at least with {{pointsConversionFactor}} {{currency}} = 1 Point.",
+          "BET_IN_TOTAL": "The winner is the player with the highest total sum of bets placed. {{pointsConversionFactor}} {{currency}} = 1 Point.",
+          "PLACE_BETS": "The winner is the player who places the highest total number of individual bets. {{pointsConversionFactor}} = 1 Point.",
+          "COLLECT_CASH_OUTS_MULTIPLIER_SUM": "The winner is the player with the highest combined sum of all their winning multipliers {{pointsConversionFactor}}x = 1 Point.",
+          "CATCH_HIGHEST_MULTIPLIER": "The winner is the player who catches the single highest multiplier in the tournament. {{pointsConversionFactor}}x = 1 Point.",
+          "NET_PROFIT_IN_TOTAL": "The winner is the player with the highest total net profit (total win amount minus total bet amount). {{pointsConversionFactor}} {{currency}} = 1 Point."
+        },
+        "prizes": {
+          "title": "Prizes",
+          "point1": "To claim a prize, compete in the Tournament until it ends.",
+          "point2": "Each winner will receive a prize according to their finishing position.",
+          "point2-1": "Challenge progress is updated only while the challenge is active. As soon as the prize pool is depleted or the time expires, progress stops updating.",
+          "point3": "If there is a prize associated with the finishing place, it will be added to your account automatically after the Tournament ends.",
+          "point3-1": "The time of receipt for the Special Prize may vary depending on the operator. Please contact your casino provider for more information.",
+          "point4": "You can view the list of participants in the Leaderboard modal window."
+        },
+        "pleaseNote": "Please note the minimum bet size required for Tournament participation. Ensure your bet meets or exceeds this specified threshold to qualify."
+      },
+      "shared": {
+        "point1": "Only bets placed with real-money balance count toward challenge progress. Bets placed using bonus funds do not contribute to this challenge."
+      }
+    },
+    "tasks": {
+      "CATCH_MULTIPLIERS": "Catch multiplier {{targetMinMultiplier}}x or more",
+      "WIN_MONEY_IN_TOTAL": "Win {{goal}} {{currency}} in total",
+      "BET_IN_TOTAL": "Bet {{goal}} {{currency}} in total",
+      "PLACE_BETS": "Place a total of {{goal}} individual bets",
+      "COLLECT_CASH_OUTS_MULTIPLIER_SUM": "Collect {{goal}}x in multipliers total",
+      "NET_PROFIT_IN_TOTAL": "Reach {{goal}} {{currency}} in net profit",
+      "Min. bet": "Min. bet - {{minBet}} {{currency}}",
+      "xTournament": {
+        "WIN_MONEY_IN_TOTAL": {
+          "name": "Collect Winnings",
+          "description": "The winner is the player with the highest total amount of money won. {{pointsConversionFactor}} {{currency}} = 1 Point."
+        },
+        "BET_IN_TOTAL": {
+          "name": "Place Bets",
+          "description": "The winner is the player with the highest total amount of bets placed. {{pointsConversionFactor}} {{currency}} = 1 Point."
+        },
+        "PLACE_BETS": {
+          "name": "Place individual bets",
+          "description": "The winner is the player who places the highest total number of individual bets. {{pointsConversionFactor}} = 1 Point."
+        },
+        "COLLECT_CASH_OUTS_MULTIPLIER_SUM": {
+          "name": "Collect multipliers",
+          "description": "The winner is the player with the highest combined sum of all their winning multipliers {{pointsConversionFactor}}x = 1 Point."
+        },
+        "CATCH_HIGHEST_MULTIPLIER": {
+          "name": "Catch Highest Multiplier",
+          "description": "The winner is the player who catches the single highest multiplier in the tournament. {{pointsConversionFactor}}x = 1 Point."
+        },
+        "NET_PROFIT_IN_TOTAL": {
+          "name": "With the highest NET profit",
+          "description": "The winner is the player with the highest total net profit (total win amount minus total bet amount). {{pointsConversionFactor}} {{currency}} = 1 Point."
+        },
+        "Min. bet": "Min. bet - {{minBet}} {{currency}}"
+      }
+    },
+    "toastMessage": {
+      "Mission": {
+        "Task completed:": "Task completed:",
+        "Challenge completed. Take your prize!": "Mission completed. Take your prize!",
+        "Prize has been paid. Congratulations!": "Prize has been paid. Congratulations!",
+        "Challenge ended: all prizes have been won": "Mission ended: all prizes have been won",
+        "Challenge has been paused": "Mission has been paused",
+        "Challenge has been resumed": "Mission has been resumed",
+        "You have been removed from the Challenge by the Administrator": "You have been removed from the Mission by the Administrator",
+        "Challenge was canceled": "Mission was canceled",
+        "Challenge is over! See you at the next challenge!": "Mission is over! See you at the next challenge!",
+        "Challenge has started! Good luck!": "The Mission has started! Good luck!"
+      },
+      "Tournament": {
+        "Task completed:": "Task completed:",
+        "Challenge completed. Take your prize!": "Tournament completed. Take your prize!",
+        "Prize has been paid. Congratulations!": "Prize has been paid. Congratulations!",
+        "Challenge ended: all prizes have been won": "Tournament ended: all prizes have been won",
+        "Challenge has been paused": "Tournament has been paused",
+        "Challenge has been resumed": "Tournament has been resumed",
+        "You have been removed from the Challenge by the Administrator": "You have been removed from the Tournament by the Administrator",
+        "Challenge was canceled": "Tournament was canceled",
+        "Challenge is over! See you at the next challenge!": "Tournament is over! See you at the next challenge!",
+        "Challenge has started! Good luck!": "The Tournament has started! Good luck!"
+      }
+    }
+  },
+  "newChat": {
+    "Online:": "Online:",
+    "Pinned Messages": "Pinned Messages",
+    "New messages": "New messages",
+    "Send Rain": "Send Rain",
+    "Your message...": "Your message...",
+    "Total amount": "Total amount",
+    "Total:": "Total:",
+    "Rain": "Rain",
+    "Quantity:": "Quantity:",
+    "Claim": "Claim",
+    "Claimed": "Claimed",
+    "Distributed": "Distributed",
+    "Expired": "Expired",
+    "Tickets Giveaway": "Tickets Giveaway",
+    "Tickets": "Tickets",
+    "Spam Filter...": "Spam Filter...",
+    "Search emoji..": "Search emoji..",
+    "Number of players": "Number of players",
+    "Amount per player": "Amount per player",
+    "This feature will give selected amount to random users in chat.": "This feature will give selected amount to random users in chat.",
+    "chat-message": {
+      "Good job! 😮": "Good job! 😮",
+      "Wow! 😮": "Wow! 😮",
+      "Awesome! 🌟": "Awesome! 🌟",
+      "Cool! 😎": "Cool! 😎",
+      "That's huge! 🛩": "That's huge! 🛩",
+      "Congratulations 👏": "Congratulations 👏",
+      "Best in this round with HUGE WIN! 👏": "Best in this round with HUGE WIN! 👏",
+      "chat-message-ban": {
+        "you": " You",
+        "have been": " have been",
+        "has been": " has been",
+        "banned-other": " banned",
+        "banned-me": " banned",
+        "from chat": " from chat",
+        "from chat for": " from chat for",
+        "from chat until": " from chat until",
+        "from chat permanently": " from chat permanently",
+        "day": " d",
+        "hour": " h",
+        "min": " m",
+        "sec": " s",
+        "reason": ". Reason: ",
+        "Reason:": "Reason:",
+        "strong language": "Strong language",
+        "spam": "Spam",
+        "players": " players"
+      },
+      "chat-message-restriction": {
+        "Chat access is restricted for players with balance below {amount} {currency}.": "Chat access is restricted for players with balance below {{amount}} {{currency}}",
+        "Chat access is restricted for players with wager amount over the last {duration} days below {amount} {currency}.": "Chat access is restricted for players with wager amount over the last {{duration}} day(s) below {{amount}} {{currency}}",
+        "Chat access is restricted for players whose account has been active for less than {duration} days.": "Chat access is restricted for players whose account has been active for less than {{duration}} day(s).",
+        "Message blocked for breaking chat rules. Further violations may result in a ban.": "Message blocked for breaking chat rules. Further violations may result in a ban.",
+        "You have been banned from chat. Reason: {reason}.": "You have been banned from chat. Reason: {{reason}}.",
+        "You have been banned from chat until {date}. Reason: {reason}.": "You have been banned from chat until {{date}}. Reason: {{reason}}."
+      }
+    },
+    "chat-input": {
+      "please wait": "Spam filter...",
+      "chat-input-tools": {
+        "chat-input-tool-emoji": {
+          "favorites": "Favorites",
+          "people": "People",
+          "nature": "Nature",
+          "objects": "Objects",
+          "places": "Places",
+          "symbols": "Symbols"
+        }
+      }
+    },
+    "chat-connector-message": {
+      "Establishing a chat connection...": "Establishing a chat connection...",
+      "Chat has been disconnected.": "Chat has been disconnected."
+    },
+    "modals": {
+      "chat-rules": {
+        "title": "CHAT RULES",
+        "point1": "Do not spam or use excessive capital letters when chatting.",
+        "point2": "Be respectful; do not harass or be offensive to other players.",
+        "point3": "Do not share personal information of yourself or other players.",
+        "point4": "Do not beg or ask for loans, rains, or tips.",
+        "point5": "Avoid behavior that may be seen as potential scams.",
+        "point6": "Do not engage in any form of advertising, trading, selling, buying, or offering services.",
+        "point7": "Chat access is restricted for players with balance below {{minBalanceInPlayerCurrency}} {{currency}}",
+        "point8": "Chat access is restricted for players with wager amount over the last {{minWagerPeriodInDays}} days below {{minWagerInPlayerCurrency}} {{currency}}",
+        "point9": "Chat access is restricted for players whose account has been active for less than {{minLifetimePeriodInDays}} day(s)."
+      }
+    }
+  }
+}

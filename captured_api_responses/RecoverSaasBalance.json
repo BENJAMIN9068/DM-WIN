@@ -1,0 +1,12 @@
+{
+  "data": {
+    "amount": 0,
+    "uRate": 0,
+    "uGold": 0
+  },
+  "code": 0,
+  "msg": "Recovery of the balance is begin",
+  "msgCode": 0,
+  "traceId": "",
+  "serviceNowTime": "2026-10-02 00:38:30"
+}

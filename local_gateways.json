@@ -1,0 +1,42 @@
+{
+  "upi-qr": {
+    "id": "upi-qr",
+    "name": "UPI-QR",
+    "route": "/upi-qr",
+    "enabled": true,
+    "qrImage": "\"C:\\Users\\godfa\\Downloads\\Screenshot 2026-10-02 185349.png",
+    "upiId": "official.dmfirst@bank",
+    "minAmount": 100,
+    "maxAmount": 50000
+  },
+  "upixqr": {
+    "id": "upixqr",
+    "name": "UPI x QR",
+    "route": "/upixqr",
+    "enabled": true,
+    "qrImage": "/uploads/gateways/upix_qr.svg",
+    "upiId": "upixpay.merchant@yesbank",
+    "minAmount": 100,
+    "maxAmount": 50000
+  },
+  "wallet-qr": {
+    "id": "wallet-qr",
+    "name": "E-Wallet",
+    "route": "/wallet-qr",
+    "enabled": true,
+    "qrImage": "/uploads/gateways/wallet_qr.svg",
+    "upiId": "ewallet.merchant@icici",
+    "minAmount": 100,
+    "maxAmount": 50000
+  },
+  "paytmqr": {
+    "id": "paytmqr",
+    "name": "Paytm x QR",
+    "route": "/paytmqr",
+    "enabled": true,
+    "qrImage": "/uploads/gateways/paytm_qr.svg",
+    "upiId": "paytmqr.fast@paytm",
+    "minAmount": 100,
+    "maxAmount": 50000
+  }
+}

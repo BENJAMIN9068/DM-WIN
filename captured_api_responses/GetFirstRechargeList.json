@@ -1,0 +1,97 @@
+{
+  "data": [
+    {
+      "id": 8,
+      "rewardAmount": 10000,
+      "rechargeAmount": 1000000,
+      "order": 8,
+      "state": 1,
+      "createTime": "2026-09-11 15:27:40",
+      "lastUpdateTime": "2026-09-11 15:27:42",
+      "canReceive": false,
+      "isFinshed": false
+    },
+    {
+      "id": 7,
+      "rewardAmount": 588,
+      "rechargeAmount": 50000,
+      "order": 7,
+      "state": 1,
+      "createTime": "2026-09-09 18:34:53",
+      "lastUpdateTime": "2026-09-11 14:50:24",
+      "canReceive": false,
+      "isFinshed": false
+    },
+    {
+      "id": 6,
+      "rewardAmount": 288,
+      "rechargeAmount": 10000,
+      "order": 6,
+      "state": 1,
+      "createTime": "2026-09-09 18:34:43",
+      "lastUpdateTime": "2026-09-11 18:49:10",
+      "canReceive": false,
+      "isFinshed": false
+    },
+    {
+      "id": 5,
+      "rewardAmount": 188,
+      "rechargeAmount": 5000,
+      "order": 5,
+      "state": 1,
+      "createTime": "2026-09-09 18:34:29",
+      "lastUpdateTime": "2026-09-11 18:48:57",
+      "canReceive": false,
+      "isFinshed": false
+    },
+    {
+      "id": 4,
+      "rewardAmount": 58,
+      "rechargeAmount": 1000,
+      "order": 4,
+      "state": 1,
+      "createTime": "2026-09-09 18:34:11",
+      "lastUpdateTime": "2026-09-11 18:48:46",
+      "canReceive": false,
+      "isFinshed": false
+    },
+    {
+      "id": 3,
+      "rewardAmount": 28,
+      "rechargeAmount": 500,
+      "order": 3,
+      "state": 1,
+      "createTime": "2026-09-09 18:33:09",
+      "lastUpdateTime": "2026-09-11 18:48:37",
+      "canReceive": false,
+      "isFinshed": false
+    },
+    {
+      "id": 2,
+      "rewardAmount": 18,
+      "rechargeAmount": 300,
+      "order": 2,
+      "state": 1,
+      "createTime": "2026-09-09 18:32:37",
+      "lastUpdateTime": "2026-09-11 18:48:24",
+      "canReceive": false,
+      "isFinshed": false
+    },
+    {
+      "id": 1,
+      "rewardAmount": 8,
+      "rechargeAmount": 100,
+      "order": 1,
+      "state": 1,
+      "createTime": "2026-09-09 18:32:20",
+      "lastUpdateTime": "2026-09-11 18:48:14",
+      "canReceive": false,
+      "isFinshed": false
+    }
+  ],
+  "code": 0,
+  "msg": "Succeed",
+  "msgCode": 0,
+  "traceId": "",
+  "serviceNowTime": "2026-10-02 00:38:19"
+}

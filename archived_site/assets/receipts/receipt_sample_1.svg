@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600" viewBox="0 0 400 600" fill="none">
+  <rect width="400" height="600" rx="16" fill="#0B132B"/>
+  <rect x="20" y="20" width="360" height="560" rx="12" fill="#1C2541" stroke="#3A506B" stroke-width="2"/>
+  
+  <!-- Success Badge -->
+  <circle cx="200" cy="90" r="36" fill="#10B981" fill-opacity="0.15"/>
+  <circle cx="200" cy="90" r="26" fill="#10B981"/>
+  <path d="M192 90L197 95L208 84" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <text x="200" y="145" text-anchor="middle" fill="#FFFFFF" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700">Payment Successful</text>
+  <text x="200" y="170" text-anchor="middle" fill="#94A3B8" font-family="Inter, system-ui, sans-serif" font-size="13">PhonePe UPI Gateway</text>
+  
+  <text x="200" y="225" text-anchor="middle" fill="#10B981" font-family="Inter, system-ui, sans-serif" font-size="34" font-weight="800">₹1,000.00</text>
+  
+  <!-- Divider -->
+  <line x1="45" y1="260" x2="355" y2="260" stroke="#334155" stroke-dasharray="6 6"/>
+  
+  <!-- Details -->
+  <g font-family="Inter, system-ui, sans-serif" font-size="13">
+    <text x="50" y="300" fill="#94A3B8">Transaction ID</text>
+    <text x="350" y="300" text-anchor="end" fill="#F8FAFC" font-weight="600">T2610020930154821</text>
+    
+    <text x="50" y="340" fill="#94A3B8">UTR Number</text>
+    <text x="350" y="340" text-anchor="end" fill="#F59E0B" font-weight="700">428190384721</text>
+    
+    <text x="50" y="380" fill="#94A3B8">Paid To</text>
+    <text x="350" y="380" text-anchor="end" fill="#F8FAFC" font-weight="600">DMFirst Merchant Pay</text>
+    
+    <text x="50" y="420" fill="#94A3B8">From</text>
+    <text x="350" y="420" text-anchor="end" fill="#F8FAFC" font-weight="600">9068839558@ybl</text>
+    
+    <text x="50" y="460" fill="#94A3B8">Date &amp; Time</text>
+    <text x="350" y="460" text-anchor="end" fill="#F8FAFC" font-weight="600">02 Oct 2026, 09:30 AM</text>
+  </g>
+  
+  <!-- Bottom Security -->
+  <rect x="45" y="500" width="310" height="48" rx="8" fill="#0F172A" stroke="#1E293B"/>
+  <circle cx="70" cy="524" r="10" fill="#3B82F6" fill-opacity="0.2"/>
+  <path d="M68 521L72 524L68 527" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+  <text x="90" y="529" fill="#94A3B8" font-family="Inter, system-ui, sans-serif" font-size="12">Verified by UPI NPCI Security</text>
+</svg>

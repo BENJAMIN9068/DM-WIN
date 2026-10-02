@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkchicken_road_client=self.webpackChunkchicken_road_client||[]).push([["864"],{7635:function(c,e,n){n.r(e),n.d(e,{GRID_VERSION:()=>i});let i="0.0.1"}}]);

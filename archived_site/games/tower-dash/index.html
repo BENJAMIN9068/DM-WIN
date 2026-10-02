@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+<script id="__wallet_bridge__">
+// ── Wallet Bridge: reads balance from parent app and syncs back ──────────
+(function() {
+  var WALLET_KEY = 'dmfirst_game_wallet';
+  var SLUG = 'tower-dash';
+
+  window.__gameBalance = 0;
+  window.__gameBalanceDeducted = 0;
+
+  function readInitialBalance() {
+    try {
+      var raw = localStorage.getItem(WALLET_KEY);
+      if (raw) {
+        var data = JSON.parse(raw);
+        if (data && typeof data.balance === 'number' && data.balance >= 0) {
+          window.__gameBalance = data.balance;
+          return data.balance;
+        }
+      }
+    } catch (e) {}
+    return 350;
+  }
+
+  function saveBalance(newBal) {
+    try {
+      newBal = Math.max(0, parseFloat(Number(newBal).toFixed(2)));
+      window.__gameBalance = newBal;
+      var existing = {};
+      try { existing = JSON.parse(localStorage.getItem(WALLET_KEY) || '{}'); } catch(e) {}
+      existing.balance = newBal;
+      existing.time = Date.now();
+      localStorage.setItem(WALLET_KEY, JSON.stringify(existing));
+    } catch (e) {}
+  }
+
+  function syncToServer(balance, slug) {
+    try {
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/game-wallet', true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.send(JSON.stringify({ balance: balance, slug: slug }));
+    } catch(e) {}
+  }
+
+  function loadFromServer(slug) {
+    try {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', '/api/game-wallet', false); // sync
+      xhr.send();
+      var data = JSON.parse(xhr.responseText);
+      if (data && typeof data.balance === 'number') {
+        window.__gameBalance = data.balance;
+        saveBalance(data.balance);
+        return data.balance;
+      }
+    } catch(e) {}
+    return readInitialBalance();
+  }
+  loadFromServer(SLUG);
+
+  // Pre-seed sessionStorage with real wallet balance in INR
+  try {
+    var bal = (window.__gameBalance !== undefined && window.__gameBalance !== null) ? window.__gameBalance : 350;
+    window.sessionStorage.setItem("peperoad.lockedGameCurrency", JSON.stringify({
+      currency: "INR",
+      balance: { balance: bal, currency: "INR" }
+    }));
+  } catch(e) {}
+
+  // ── WebSocket Interceptor for Inout Games Game Engine ──
+  (function() {
+    var OrigWebSocket = window.WebSocket;
+    if (!OrigWebSocket) return;
+
+    window.WebSocket = function(url, protocols) {
+      var ws = protocols !== undefined ? new OrigWebSocket(url, protocols) : new OrigWebSocket(url); window.__lastGameWs = ws;
+      
+      var pendingPlayId = null;
+      var pendingPayoutId = null;
+      var pendingStepId = null;
+      var currentBetAmount = 0;
+      var roundResolved = true;
+
+      function showToast(msg) {
+        try {
+          var toast = document.createElement('div');
+          toast.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#e74c3c;color:#fff;padding:12px 28px;border-radius:8px;font-family:sans-serif;font-weight:bold;z-index:999999;box-shadow:0 4px 16px rgba(0,0,0,0.6);font-size:15px;pointer-events:none;transition:opacity 0.3s;';
+          toast.textContent = msg;
+          document.body.appendChild(toast);
+          setTimeout(function() {
+            toast.style.opacity = '0';
+            setTimeout(function() { toast.remove(); }, 300);
+          }, 2500);
+        } catch(e) {}
+      }
+
+      function dispatchBalanceUpdate(bal) {
+        try {
+          var balStr = Number(bal).toFixed(2);
+          var msg = '42["onBalanceChange",{"currency":"INR","balance":"' + balStr + '"}]';
+          ws.dispatchEvent(new MessageEvent('message', { data: msg }));
+        } catch(e) {}
+      }
+
+      var origSend = ws.send;
+      ws.send = function(data) {
+        if (typeof data === 'string' && data.startsWith('42')) {
+          var match = data.match(/^42(\d*)(\[.*\])$/);
+          if (match) {
+            var reqId = match[1];
+            try {
+              var parsed = JSON.parse(match[2]);
+              if (parsed[0] === 'gameService' && parsed[1]) {
+                var act = parsed[1].action;
+                if (act === 'play' || act === 'bet') {
+                  var p = parsed[1].payload || {};
+                  var amt = parseFloat(p.amount !== undefined ? p.amount : p.betAmount);
+                  if (!isNaN(amt) && amt > window.__gameBalance) {
+                    console.warn('[Wallet] Insufficient funds for bet: ₹' + amt + ', balance: ₹' + window.__gameBalance);
+                    showToast('Insufficient funds for this bet!');
+                    return; // Block outgoing bet!
+                  }
+                  pendingPlayId = reqId;
+                  currentBetAmount = !isNaN(amt) ? amt : 0;
+                  roundResolved = false;
+                } else if (act === 'payout' || act === 'withdraw') {
+                  pendingPayoutId = reqId;
+                } else if (act === 'step') {
+                  pendingStepId = reqId;
+                }
+              }
+            } catch(e) {}
+          }
+        }
+        return origSend.call(this, data);
+      };
+
+      ws.addEventListener('message', function(event) {
+        var msg = event.data;
+        if (typeof msg === 'string') {
+          // 1. Rewrite onBalanceChange with current window.__gameBalance
+          if (msg.includes('onBalanceChange')) {
+            var curBal = Number(window.__gameBalance || 0).toFixed(2);
+            var replaced = msg.replace(/"balance":"[^"]+"/, '"balance":"' + curBal + '"');
+            try {
+              Object.defineProperty(event, 'data', { value: replaced, configurable: true });
+            } catch(e) {}
+            return;
+          }
+
+          // 2. Play / Bet Ack: Deduct bet amount
+          if (pendingPlayId && msg.startsWith('43' + pendingPlayId)) {
+            var playId = pendingPlayId;
+            pendingPlayId = null;
+            try {
+              var ackData = JSON.parse(msg.slice(('43' + playId).length))[0];
+              if (ackData && !ackData.error) {
+                window.__gameBalance = Math.max(0, parseFloat((window.__gameBalance - currentBetAmount).toFixed(2)));
+                saveBalance(window.__gameBalance);
+                syncToServer(window.__gameBalance, SLUG);
+                setTimeout(function() {
+                  dispatchBalanceUpdate(window.__gameBalance);
+                }, 50);
+              }
+            } catch(e) {}
+            return;
+          }
+
+          // 3. Payout / Cashout Ack: Add cashout win amount
+          if (pendingPayoutId && msg.startsWith('43' + pendingPayoutId)) {
+            var payoutId = pendingPayoutId;
+            pendingPayoutId = null;
+            try {
+              var ackData = JSON.parse(msg.slice(('43' + payoutId).length))[0];
+              if (ackData && !ackData.error) {
+                var winAmt = parseFloat(ackData.winAmount !== undefined ? ackData.winAmount : ackData.amount);
+                if (!isNaN(winAmt) && winAmt > 0 && !roundResolved) {
+                  roundResolved = true;
+                  window.__gameBalance = parseFloat((window.__gameBalance + winAmt).toFixed(2));
+                  saveBalance(window.__gameBalance);
+                  syncToServer(window.__gameBalance, SLUG);
+                  setTimeout(function() {
+                    dispatchBalanceUpdate(window.__gameBalance);
+                  }, 50);
+                }
+              }
+            } catch(e) {}
+            return;
+          }
+
+          // 4. Step Ack:
+          // In Tower games, intermediate steps return { status: 'in-game', winAmount: ... } -> DO NOT ADD!
+          // If status is 'lose' -> round lost, DO NOT ADD!
+          // ONLY if status is 'win' (reached top of tower and finished) -> add winAmount!
+          if (pendingStepId && msg.startsWith('43' + pendingStepId)) {
+            var stepId = pendingStepId;
+            pendingStepId = null;
+            try {
+              var ackData = JSON.parse(msg.slice(('43' + stepId).length))[0];
+              if (ackData && !ackData.error) {
+                if (ackData.status === 'win' || (ackData.isWin === true && ackData.isFinished === true)) {
+                  var winAmt = parseFloat(ackData.winAmount !== undefined ? ackData.winAmount : ackData.amount);
+                  if (!isNaN(winAmt) && winAmt > 0 && !roundResolved) {
+                    roundResolved = true;
+                    window.__gameBalance = parseFloat((window.__gameBalance + winAmt).toFixed(2));
+                    saveBalance(window.__gameBalance);
+                    syncToServer(window.__gameBalance, SLUG);
+                    setTimeout(function() {
+                      dispatchBalanceUpdate(window.__gameBalance);
+                    }, 50);
+                  }
+                } else if (ackData.status === 'lose') {
+                  roundResolved = true;
+                }
+              }
+            } catch(e) {}
+            return;
+          }
+        }
+      }, true); // capturing phase
+
+      return ws;
+    };
+
+    window.WebSocket.prototype = OrigWebSocket.prototype;
+  })();
+  // ── End WebSocket Interceptor ──
+
+  // Watch for visibility change - save latest balance when leaving
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      saveBalance(window.__gameBalance);
+    }
+  });
+
+  window.addEventListener('beforeunload', function() {
+    saveBalance(window.__gameBalance);
+  });
+
+  window.addEventListener('pagehide', function() {
+    saveBalance(window.__gameBalance);
+  });
+
+  // PostMessage support
+  window.addEventListener('message', function(e) {
+    try {
+      var msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+      if (!msg) return;
+      if (msg.type === 'GET_BALANCE' || msg.action === 'getBalance') {
+        e.source && e.source.postMessage(JSON.stringify({
+          type: 'BALANCE',
+          balance: window.__gameBalance,
+          amount: window.__gameBalance
+        }), '*');
+      }
+      if (msg.type === 'SET_BALANCE' && typeof msg.balance === 'number') {
+        saveBalance(msg.balance);
+      }
+    } catch (e2) {}
+  });
+
+})();
+</script>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>MegaBlock</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        overscroll-behavior: none;
+        background-color: rgb(28, 34, 42);
+      }
+      #fit-root {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Montserrat:wght@400;500;600;700;800;900&family=Nunito:wght@400;500;600;700;800;900&family=Roboto+Flex:opsz,wght@8..144,100..1000&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <script id="__MEGABLOCK_SHIELD__">
+      (function() {
+        try {
+          window.alert = function(msg) { console.warn('[Suppressed alert]:', msg); };
+          window.confirm = function() { return true; };
+          window.prompt = function() { return null; };
+          Object.defineProperty(window, 'alert', { value: window.alert, writable: false, configurable: true });
+          Object.defineProperty(window, 'confirm', { value: window.confirm, writable: false, configurable: true });
+          Object.defineProperty(window, 'prompt', { value: window.prompt, writable: false, configurable: true });
+        } catch(e) {}
+
+        var defaults = {
+          gameMode: 'megablock',
+          operatorId: 'ee2013ed-e1f0-4d6e-97d2-f36619e2eb52',
+          authToken: '247d3637-c5dc-a67b-50a1-89df27733343',
+          currency: 'INR',
+          lang: 'en'
+        };
+
+        try {
+          var fullParams = '?gameMode=megablock&operatorId=ee2013ed-e1f0-4d6e-97d2-f36619e2eb52&authToken=247d3637-c5dc-a67b-50a1-89df27733343&currency=INR&lang=en&_enableCanvasTestGrid=1&theme=&lobbyUrl=';
+          if (!window.location.search || !window.location.search.includes('operatorId')) {
+            window.history.replaceState(null, '', window.location.pathname + fullParams);
+          }
+        } catch(e) {}
+
+        try {
+          var origGet = URLSearchParams.prototype.get;
+          URLSearchParams.prototype.get = function(name) {
+            var val = origGet.call(this, name);
+            if (name === "currency") return "INR";
+            if (!val && defaults[name]) {
+              return defaults[name];
+            }
+            return val;
+          };
+        } catch(e) {}
+      })();
+    </script>
+  <style id="__clean_fun_mode_css__">
+  .fun-mode, [class*="fun-mode"], [class*="demo-mode"], [id*="fun-mode"], [id*="demo-mode"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    pointer-events: none !important;
+  }
+</style>
+<script id="__clean_fun_mode_js__">
+(function() {
+  function removeFunDemoText() {
+    try {
+      var root = document.body || document.documentElement;
+      if (!root) return;
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+      var node;
+      while ((node = walker.nextNode())) {
+        if (node.nodeValue && /(fun\s*mode|demo\s*mode|play\s*for\s*fun)/i.test(node.nodeValue)) {
+          node.nodeValue = node.nodeValue.replace(/(fun\s*mode|demo\s*mode|play\s*for\s*fun)/gi, '');
+        }
+      }
+    } catch(e) {}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      removeFunDemoText();
+      setInterval(removeFunDemoText, 1000);
+    });
+  } else {
+    removeFunDemoText();
+    setInterval(removeFunDemoText, 1000);
+  }
+})();
+</script>
+
+    
+</head>
+  <body>
+    <div
+      id="fit-root"
+      style="margin:auto; position:relative; overflow:hidden; transform:translateZ(0);"
+    >
+      <div id="root"></div>
+    </div>
+    <!--
+      Слои-порталы для модалок. Лежат прямо в <body> (не внутри #fit-root),
+      чтобы выйти из stacking-контекстов #fit-root (transform) и ThemeBackground
+      (transform) — иначе системные модалки оказываются «заперты» под игровыми.
+      Порядок задаётся ИМЕННО здесь, один раз: игровые (spine win-модалки) ниже,
+      системные (info-модалки) выше. Внутри каждого слоя z-index локален.
+      TransitionScreen намеренно НЕ тут — у него свой полноэкранный портал с
+      максимальным z-index, он перекрывает вообще всё.
+    -->
+    <div id="game-modal-layer" style="position:fixed; inset:0; z-index:1000; pointer-events:none;"></div>
+    <div id="system-modal-layer" style="position:fixed; inset:0; z-index:2000; pointer-events:none;"></div>
+    <script type="module" src="./1782780257595-main.js"></script>
+    <script>
+      (function () {
+        // Global anti-zoom guard for mobile browsers (pinch, double-tap, gesture zoom).
+        function blockZoomGesture(event) {
+          if (event.cancelable) {
+            event.preventDefault();
+          }
+        }
+
+        function isInteractiveTouchTarget(target) {
+          if (!target || !(target instanceof Element)) return false;
+          return Boolean(
+            target.closest("input, textarea, select, button, a, label, canvas, [role='button'], [contenteditable='true']"),
+          );
+        }
+
+        document.addEventListener("gesturestart", blockZoomGesture, { passive: false });
+        document.addEventListener("gesturechange", blockZoomGesture, { passive: false });
+        document.addEventListener("gestureend", blockZoomGesture, { passive: false });
+
+        // Disable long-press context menu / text selection magnifier on any
+        // non-editable element. We keep it enabled for inputs/textareas so
+        // the user can still reach the keyboard's own cursor UI.
+        document.addEventListener("contextmenu", function (event) {
+          var target = event.target;
+          if (isInteractiveTouchTarget(target) && target instanceof HTMLElement) {
+            var tag = target.tagName;
+            if (tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable) {
+              return;
+            }
+          }
+          if (event.cancelable) {
+            event.preventDefault();
+          }
+        }, { passive: false });
+
+        document.addEventListener("touchstart", function (event) {
+          if (event.touches && event.touches.length > 1) {
+            blockZoomGesture(event);
+          }
+        }, { passive: false });
+
+        document.addEventListener("touchmove", function (event) {
+          if (event.touches && event.touches.length > 1) {
+            blockZoomGesture(event);
+          }
+        }, { passive: false });
+
+        var lastSingleTouchEnd = 0;
+        document.addEventListener("touchend", function (event) {
+          var now = Date.now();
+          if (now - lastSingleTouchEnd <= 300 && !isInteractiveTouchTarget(event.target)) {
+            blockZoomGesture(event);
+          }
+          lastSingleTouchEnd = now;
+        }, { passive: false });
+
+        window.addEventListener("wheel", function (event) {
+          if (event.ctrlKey) {
+            blockZoomGesture(event);
+          }
+        }, { passive: false });
+
+        function keepWindowAtTop() {
+          if (window.scrollX !== 0 || window.scrollY !== 0) {
+            window.scrollTo(0, 0);
+          }
+        }
+
+        keepWindowAtTop();
+        window.addEventListener("scroll", keepWindowAtTop, { passive: true });
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener("scroll", keepWindowAtTop);
+        }
+
+        function fit(container, minRatioW, minRatioH, maxRatioW, maxRatioH, viewportWidth, viewportHeight) {
+          var widthBase = Math.max(1, viewportWidth || window.innerWidth);
+          var heightBase = Math.max(1, viewportHeight || window.innerHeight);
+          var currentR = widthBase / heightBase;
+
+          var minR = minRatioW / minRatioH;
+          var maxR = maxRatioW / maxRatioH;
+
+          var clampedR = Math.min(Math.max(currentR, minR), maxR);
+
+          var width = widthBase;
+          var height = width / clampedR;
+
+          if (height > heightBase) {
+            width = Math.min(width, Math.ceil(heightBase * clampedR));
+          }
+
+          height = Math.floor(width / clampedR);
+
+          container.style.width = width + "px";
+          container.style.height = height + "px";
+
+          // header/logo scale based on fitted area height
+          var baseHeight = 900; // design reference height
+          var headerScale = container.clientHeight / baseHeight;
+          if (!isFinite(headerScale) || headerScale <= 0) headerScale = 1;
+          // clamp: not larger than 100% (no minimum floor)
+          headerScale = Math.min(1, headerScale);
+          document.documentElement.style.setProperty("--header-scale", String(headerScale));
+        }
+
+        var stableViewportWidth = window.innerWidth;
+        var stableViewportHeight = window.innerHeight;
+
+        function isEditableElement(element) {
+          if (!element || !(element instanceof HTMLElement)) return false;
+          if (element.isContentEditable) return true;
+          var tagName = element.tagName;
+          if (tagName === "TEXTAREA") {
+            return !element.readOnly && !element.disabled;
+          }
+          if (tagName !== "INPUT") return false;
+          var inputType = (element.type || "").toLowerCase();
+          if (element.readOnly || element.disabled) return false;
+          if (!inputType) return true;
+          return [
+            "text",
+            "search",
+            "tel",
+            "url",
+            "email",
+            "password",
+            "number"
+          ].indexOf(inputType) !== -1;
+        }
+
+        function isKeyboardLikelyOpen() {
+          var active = document.activeElement;
+          if (!isEditableElement(active)) return false;
+
+          var currentHeight = window.innerHeight;
+          if (stableViewportHeight - currentHeight > 90) {
+            return true;
+          }
+
+          if (!window.visualViewport) {
+            return false;
+          }
+
+          var vv = window.visualViewport;
+          var visualGap = Math.max(0, currentHeight - vv.height - vv.offsetTop);
+          return visualGap > 90;
+        }
+
+        function applyFit() {
+          var container = document.getElementById("fit-root");
+          if (!container) return;
+
+          var viewportWidth = window.innerWidth;
+          var viewportHeight = window.innerHeight;
+          var keyboardOpen = isKeyboardLikelyOpen();
+
+          if (keyboardOpen) {
+            viewportWidth = stableViewportWidth;
+            viewportHeight = stableViewportHeight;
+          } else {
+            stableViewportWidth = viewportWidth;
+            stableViewportHeight = viewportHeight;
+          }
+
+          fit(container, 1, 2340, 2620, 1, viewportWidth, viewportHeight);
+        }
+
+        var rafId = null;
+        var scheduleFit = function () {
+          if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+          }
+          rafId = requestAnimationFrame(function () {
+            rafId = null;
+            applyFit();
+          });
+        };
+
+        scheduleFit();
+        window.addEventListener("load", scheduleFit);
+        window.addEventListener("resize", scheduleFit);
+        window.addEventListener("orientationchange", scheduleFit);
+        document.addEventListener("focusin", scheduleFit, true);
+        document.addEventListener("focusout", function () {
+          setTimeout(scheduleFit, 60);
+        }, true);
+
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener("resize", scheduleFit);
+        }
+
+        if ("ResizeObserver" in window) {
+          var resizeObserver = new ResizeObserver(scheduleFit);
+          resizeObserver.observe(document.documentElement);
+        }
+      })();
+    </script>
+  </body>
+</html>

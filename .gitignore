@@ -1,0 +1,10 @@
+node_modules/
+*.log
+cloudflared.exe
+.DS_Store
+Thumbs.db
+scratch/
+verification_screenshots/
+diagnostic_results/
+captured_pages/
+*.png

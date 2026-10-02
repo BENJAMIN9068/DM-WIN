@@ -1,0 +1,59 @@
+{
+  "title": "dmfirst",
+  "metas": [
+    {
+      "name": "google",
+      "content": "notranslate"
+    },
+    {
+      "name": "robots",
+      "content": "noindex,nofollow"
+    },
+    {
+      "name": "viewport",
+      "content": "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    },
+    {
+      "name": "description",
+      "content": "Discover DmFirst for exciting entertainment, exclusive rewards, special events, latest updates, and a smooth mobile experience."
+    },
+    {
+      "name": "og:title",
+      "content": "DmFirst Official - Entertainment & Rewards Platform"
+    },
+    {
+      "name": "og:description",
+      "content": "Discover DmFirst for exciting entertainment, exclusive rewards, special events, latest updates, and a smooth mobile experience."
+    },
+    {
+      "name": "og:image",
+      "content": "/icon-192x192.png?v=2"
+    },
+    {
+      "name": "og:type",
+      "content": "website"
+    },
+    {
+      "name": "twitter:card",
+      "content": "summary_large_image"
+    },
+    {
+      "name": "twitter:title",
+      "content": "DmFirst Official - Entertainment & Rewards Platform"
+    },
+    {
+      "name": "twitter:description",
+      "content": "Discover DmFirst for exciting entertainment, exclusive rewards, special events, latest updates, and a smooth mobile experience."
+    },
+    {
+      "name": "twitter:image",
+      "content": "/icon-192x192.png?v=2"
+    }
+  ],
+  "links": [],
+  "sampleButtons": [
+    "Log in",
+    "Register",
+    "Detail"
+  ]
+}

@@ -1,0 +1,431 @@
+<!DOCTYPE html><html lang="en" translate="no"><head>
+<script id="__wallet_bridge__">
+// â”€â”€ Wallet Bridge: reads balance from parent app and syncs back â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+(function() {
+  var WALLET_KEY = 'dmfirst_game_wallet';
+
+  // Exposed balance variable games can reference
+  window.__gameBalance = 0;
+  window.__gameBalanceDeducted = 0;
+
+  function readInitialBalance() {
+    try {
+      var raw = localStorage.getItem(WALLET_KEY);
+      if (raw) {
+        var data = JSON.parse(raw);
+        if (data && typeof data.balance === 'number' && data.balance >= 0) {
+          window.__gameBalance = data.balance;
+          return data.balance;
+        }
+      }
+    } catch (e) {}
+    return 0;
+  }
+
+  function saveBalance(newBal) {
+    try {
+      newBal = Math.max(0, parseFloat(newBal.toFixed(2)));
+      window.__gameBalance = newBal;
+      var existing = {};
+      try { existing = JSON.parse(localStorage.getItem(WALLET_KEY) || '{}'); } catch(e) {}
+      existing.balance = newBal;
+      existing.time = Date.now();
+      localStorage.setItem(WALLET_KEY, JSON.stringify(existing));
+    } catch (e) {}
+  }
+
+  // â”€â”€ Server-side balance sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function syncToServer(balance, slug) {
+    try {
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/game-wallet', true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.send(JSON.stringify({ balance: balance, slug: slug }));
+    } catch(e) {}
+  }
+
+  function loadFromServer(slug) {
+    try {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', '/api/game-wallet', false); // sync
+      xhr.send();
+      var data = JSON.parse(xhr.responseText);
+      if (data && typeof data.balance === 'number') {
+        window.__gameBalance = data.balance;
+        saveBalance(data.balance);
+        return data.balance;
+      }
+    } catch(e) {}
+    return readInitialBalance();
+  }
+  // Load real server balance synchronously on boot
+  loadFromServer('chicken-road-2');
+
+  
+  // Continuous sync of UI balance element
+  function syncMenuBalance() {
+    try {
+      var el = document.querySelector('[data-testid="menu-balance"]');
+      if (el) {
+        var bal = (window.__gameBalance !== undefined && window.__gameBalance !== null) ? window.__gameBalance : 0;
+        var formatted = Number(bal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (el.__lastBal !== bal) {
+          el.__lastBal = bal;
+          el.innerHTML = formatted + '<svg width="18" height="18" viewBox="0 0 18 18" style="fill: rgb(255, 255, 255); margin-left: 4px;"><use xlink:href="/games/chicken-road-2/static/svg/sprite.4de80bac.svg#INR"></use></svg>';
+        }
+      }
+    } catch(e) {}
+  }
+  setInterval(syncMenuBalance, 300);
+  document.addEventListener('DOMContentLoaded', syncMenuBalance);
+
+  
+  
+
+  
+  // ── WebSocket Interceptor for Inout Games Game Engine ──
+  (function() {
+    var SLUG = 'chicken-road-2';
+    var OrigWebSocket = window.WebSocket;
+    if (!OrigWebSocket) return;
+
+    window.WebSocket = function(url, protocols) {
+      var ws = protocols !== undefined ? new OrigWebSocket(url, protocols) : new OrigWebSocket(url);
+      
+      var lastBetId = null;
+      var lastBetAmount = 0;
+      var lastWithdrawId = null;
+      var lastStepId = null;
+
+      function showToast(msg) {
+        try {
+          var toast = document.createElement('div');
+          toast.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#e74c3c;color:#fff;padding:10px 24px;border-radius:8px;font-family:sans-serif;font-weight:bold;z-index:999999;box-shadow:0 4px 12px rgba(0,0,0,0.5);font-size:14px;pointer-events:none;transition:opacity 0.3s;';
+          toast.textContent = msg;
+          document.body.appendChild(toast);
+          setTimeout(function() {
+            toast.style.opacity = '0';
+            setTimeout(function() { toast.remove(); }, 300);
+          }, 2500);
+        } catch(e) {}
+      }
+
+      var origSend = ws.send;
+      ws.send = function(data) {
+        if (typeof data === 'string' && data.startsWith('42')) {
+          var match = data.match(/^42(\d*)(\[.*\])$/);
+          if (match) {
+            var reqId = match[1];
+            try {
+              var parsed = JSON.parse(match[2]);
+              if (parsed[0] === 'gameService' && parsed[1] && parsed[1].action === 'bet') {
+                var betAmt = parseFloat(parsed[1].payload && parsed[1].payload.betAmount);
+                if (!isNaN(betAmt) && betAmt > window.__gameBalance) {
+                  console.warn('[Wallet] Insufficient funds for bet: ₹' + betAmt + ', balance: ₹' + window.__gameBalance);
+                  showToast('Insufficient funds for this bet!');
+                  return; // Block outgoing bet!
+                }
+                lastBetId = reqId;
+                lastBetAmount = betAmt;
+              } else if (parsed[0] === 'gameService' && parsed[1] && parsed[1].action === 'withdraw') {
+                lastWithdrawId = reqId;
+              } else if (parsed[0] === 'gameService' && parsed[1] && parsed[1].action === 'step') {
+                lastStepId = reqId;
+              }
+            } catch(e) {}
+          }
+        }
+        return origSend.call(this, data);
+      };
+
+      ws.addEventListener('message', function(event) {
+        var msg = event.data;
+        if (typeof msg === 'string') {
+          // 1. Rewrite onBalanceChange with current window.__gameBalance
+          if (msg.includes('onBalanceChange')) {
+            var curBal = Number(window.__gameBalance || 0).toFixed(2);
+            var replaced = msg.replace(/"balance":"[^"]+"/, '"balance":"' + curBal + '"');
+            try {
+              Object.defineProperty(event, 'data', { value: replaced, configurable: true });
+            } catch(e) {}
+            return;
+          }
+
+          // 2. Bet Ack: Deduct bet amount
+          if (lastBetId && msg.startsWith('43' + lastBetId)) {
+            try {
+              var ackData = JSON.parse(msg.slice(('43' + lastBetId).length))[0];
+              if (ackData && ackData.isFinished === false) {
+                window.__gameBalance = Math.max(0, parseFloat((window.__gameBalance - lastBetAmount).toFixed(2)));
+                saveBalance(window.__gameBalance);
+                syncToServer(window.__gameBalance, SLUG);
+                syncMenuBalance();
+              }
+            } catch(e) {}
+          }
+
+          // 3. Withdraw or Step Win Ack: Add win amount
+          var isWithdrawAck = lastWithdrawId && msg.startsWith('43' + lastWithdrawId);
+          var isStepAck = lastStepId && msg.startsWith('43' + lastStepId);
+          if (isWithdrawAck || isStepAck) {
+            try {
+              var prefix = isWithdrawAck ? ('43' + lastWithdrawId) : ('43' + lastStepId);
+              var ackData = JSON.parse(msg.slice(prefix.length))[0];
+              if (ackData && ackData.isWin === true && ackData.winAmount) {
+                var winAmt = parseFloat(ackData.winAmount);
+                if (winAmt > 0) {
+                  window.__gameBalance = parseFloat((window.__gameBalance + winAmt).toFixed(2));
+                  saveBalance(window.__gameBalance);
+                  syncToServer(window.__gameBalance, SLUG);
+                  syncMenuBalance();
+                }
+              }
+            } catch(e) {}
+          }
+        }
+      }, true); // capturing phase!
+
+      return ws;
+    };
+
+    window.WebSocket.prototype = OrigWebSocket.prototype;
+  })();
+  // ── End WebSocket Interceptor ──
+
+  // Watch for visibility change - save latest balance when leaving
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      saveBalance(window.__gameBalance);
+    }
+  });
+
+  window.addEventListener('beforeunload', function() {
+    saveBalance(window.__gameBalance);
+  });
+
+  window.addEventListener('pagehide', function() {
+    saveBalance(window.__gameBalance);
+  });
+
+  // â”€â”€ Override fetch/XHR to intercept balance API responses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // This injects the real balance into any balance-check response the game makes
+  var _origFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    return _origFetch.apply(this, arguments).then(function(resp) {
+      var u = (typeof url === 'string' ? url : (url && url.url)) || '';
+      // Clone and patch balance in API responses
+      if (u.match(/balance|wallet|user.?info|getBalance|getUser/i)) {
+        var cloned = resp.clone();
+        return cloned.json().then(function(data) {
+          // Try to inject balance at common paths
+          var patched = injectBalance(data, window.__gameBalance);
+          return new Response(JSON.stringify(patched), {
+            status: resp.status,
+            statusText: resp.statusText,
+            headers: resp.headers
+          });
+        }).catch(function() { return resp; });
+      }
+      return resp;
+    });
+  };
+
+  var _origXHROpen = XMLHttpRequest.prototype.open;
+  var _origXHRSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open = function(method, url) {
+    this.__url = url;
+    return _origXHROpen.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.send = function() {
+    var self = this;
+    if (self.__url && String(self.__url).match(/balance|wallet|user.?info|getBalance|getUser/i)) {
+      self.addEventListener('readystatechange', function() {
+        if (self.readyState === 4) {
+          try {
+            var data = JSON.parse(self.responseText);
+            var patched = injectBalance(data, window.__gameBalance);
+            Object.defineProperty(self, 'responseText', { value: JSON.stringify(patched), writable: false });
+            Object.defineProperty(self, 'response', { value: JSON.stringify(patched), writable: false });
+          } catch (e) {}
+        }
+      });
+    }
+    return _origXHRSend.apply(this, arguments);
+  };
+
+  function injectBalance(data, bal) {
+    if (!data || typeof data !== 'object') return data;
+    // Common field names games use
+    var fields = ['balance', 'Balance', 'amount', 'Amount', 'credits', 'Credits', 'wallet', 'Wallet', 'money', 'Money', 'cash'];
+    function patchObj(obj) {
+      if (!obj || typeof obj !== 'object') return obj;
+      for (var i = 0; i < fields.length; i++) {
+        if (obj.hasOwnProperty(fields[i]) && typeof obj[fields[i]] === 'number') {
+          obj[fields[i]] = bal;
+        }
+      }
+      if (obj.data && typeof obj.data === 'object') patchObj(obj.data);
+      if (obj.user && typeof obj.user === 'object') patchObj(obj.user);
+      if (obj.result && typeof obj.result === 'object') patchObj(obj.result);
+      return obj;
+    }
+    return patchObj(data);
+  }
+
+  // â”€â”€ Expose API for games that use postMessage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  window.addEventListener('message', function(e) {
+    try {
+      var msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+      if (!msg) return;
+      if (msg.type === 'GET_BALANCE' || msg.action === 'getBalance') {
+        e.source && e.source.postMessage(JSON.stringify({
+          type: 'BALANCE',
+          balance: window.__gameBalance,
+          amount: window.__gameBalance
+        }), '*');
+      }
+      if (msg.type === 'SET_BALANCE' && typeof msg.balance === 'number') {
+        saveBalance(msg.balance);
+      }
+    } catch (e2) {}
+  });
+
+})();
+</script><script id="__CR1_RELIABILITY_SHIELD__">
+(function() {
+  function noop() {}
+  try {
+    window.alert = function(msg) { console.warn('[Blocked alert]:', msg); };
+    window.confirm = function() { return true; };
+    window.prompt = function() { return null; };
+    Object.defineProperty(window, 'alert', { value: window.alert, writable: false, configurable: true });
+    Object.defineProperty(window, 'confirm', { value: window.confirm, writable: false, configurable: true });
+    Object.defineProperty(window, 'prompt', { value: window.prompt, writable: false, configurable: true });
+  } catch(e) {}
+
+  var defaults = {
+    gameMode: 'chicken-road',
+    operatorId: 'ee2013ed-e1f0-4d6e-97d2-f36619e2eb52',
+    authToken: '247d3637-c5dc-a67b-50a1-89df27733343',
+    currency: 'INR',
+    lang: 'en'
+  };
+
+  try {
+    var fullParams = '?gameMode=chicken-road&operatorId=ee2013ed-e1f0-4d6e-97d2-f36619e2eb52&authToken=247d3637-c5dc-a67b-50a1-89df27733343&currency=INR&lang=en&theme=&gameCustomizationId=&lobbyUrl=';
+    if (!window.location.search || !window.location.search.includes('operatorId')) {
+      window.history.replaceState(null, '', window.location.pathname + fullParams);
+    }
+  } catch(e) {}
+
+  try {
+    var origGet = URLSearchParams.prototype.get;
+    URLSearchParams.prototype.get = function(name) {
+      var val = origGet.call(this, name);
+      if (!val && defaults[name]) {
+        return defaults[name];
+      }
+      return val;
+    };
+  } catch(e) {}
+})();
+</script>
+    <!-- version: 78481a12 -->
+    <meta charset="utf-8">
+    <title>ChickenRoadClient</title>
+    <base href="/games/chicken-road-2/">
+    
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="apple-touch-icon" sizes="57x57" href="/favicon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="/favicon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/favicon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="/favicon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/favicon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/favicon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/favicon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/favicon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon-180x180.png">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png">
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="/favicon-144x144.png">
+    <meta name="msapplication-config" content="/browserconfig.xml">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#ffffff">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700&amp;family=Luckiest+Guy&amp;family=Montserrat:wght@500;600;700;900&amp;display=swap" rel="stylesheet">
+  <script>!function(){"use strict";function e(e,t){for(var n=t.domain,r="",i=0;i<n.length;i++)if(-1!==e.indexOf(n[i])){r=n[i];break}return r||window.origin}var t=/[?#].*$/;function n(e,t){return null!=t&&"undefined"!=typeof Symbol&&t[Symbol.hasInstance]?!!t[Symbol.hasInstance](e):e instanceof t}var r={link:HTMLLinkElement,script:HTMLScriptElement,img:HTMLImageElement};function i(e,t){var i=t.target,a=i.tagName.toLocaleLowerCase(),o=e.type,c=n(i,HTMLScriptElement)||n(i,HTMLImageElement)?i.src:n(i,HTMLLinkElement)?i.href:null;return!!a&&-1!==o.indexOf(a)&&!!r[a]&&!!n(i,r[a])&&!!c&&{target:i,tagName:a,url:c}}function a(e,t,r){n(e,HTMLScriptElement)&&(r.isAsync?document.body.appendChild(t.element):console.warn("[@rsbuild/plugin-assets-retry] ","load sync script failed, for security only async/defer script can be retried",e)),n(e,HTMLLinkElement)&&document.getElementsByTagName("head")[0].appendChild(t.element),n(e,HTMLImageElement)&&(e.src=r.url,e.dataset.rbRetryTimes=String(r.times),e.dataset.rbOriginalQuery=String(r.originalQuery))}"undefined"==typeof window||window.__RB_ASYNC_CHUNKS__||(window.__RB_ASYNC_CHUNKS__={});try{var o={"max":3,"type":["link","script","img"],"domain":[],"crossOrigin":false,"delay":0,"addQuery":false};"undefined"!=typeof window&&void 0!==window.document&&(document.addEventListener("error",function(r){if(r&&n(r.target,Element))try{!function(r,o){var c,s=i(r,o);if(!1!==s){var l=s.target,u=s.tagName,d=s.url;if(!("undefined"!=typeof window&&Object.keys(window.__RB_ASYNC_CHUNKS__||{}).some(function(e){return -1!==d.indexOf(e)}))){var m=r.test;if(m){if("string"==typeof m){var y=new RegExp(m);m=function(e){return y.test(e)}}if("function"!=typeof m||!m(d))return}var f=e(d,r);if(!r.domain||!(r.domain.length>0)||-1!==r.domain.indexOf(f)){var g,p,b,v,_=Number(l.dataset.rbRetryTimes)||0;if(_===r.max){"function"==typeof r.onFail&&r.onFail({times:_,domain:f,url:d,tagName:u,isAsyncChunk:!1});return}var E=(g=r.domain,p=e(f,r),b=g.indexOf(p),g[(b+1)%g.length]||f),S=null!=(c=l.dataset.rbOriginalQuery)?c:(v=d.split("?")[1])?"?".concat(v.split("#")[0]):"",T=!!l.dataset.rbAsync||l.async||l.defer,w={url:function(e,n,r,i,a,o){var c;return e.replace(n,r).replace(t,"")+(c=i+1,!0===o.addQuery?""!==a?"".concat(a,"&retry=").concat(c):"?retry=".concat(c):"function"==typeof o.addQuery?o.addQuery({times:c,originalQuery:a}):"")}(d,f,E,_,S,r),times:_+1,crossOrigin:r.crossOrigin,isAsync:T,originalQuery:S},L=function(e,t){var r=!0===t.crossOrigin?"anonymous":t.crossOrigin,i=r?'crossorigin="'.concat(r,'"'):"",a=t.times?'data-rb-retry-times="'.concat(t.times,'"'):"",o=t.originalQuery?'data-rb-original-query="'.concat(t.originalQuery,'"'):"",c=t.isAsync?"data-rb-async":"";if(n(e,HTMLScriptElement)){var s=document.createElement("script");return s.src=t.url,r&&(s.crossOrigin=r),t.times&&(s.dataset.rbRetryTimes=String(t.times)),t.isAsync&&(s.dataset.rbAsync=""),void 0!==t.originalQuery&&(s.dataset.rbOriginalQuery=t.originalQuery),{element:s,str:'<script src="'.concat(t.url,'" ').concat(i," ").concat(a," ").concat(c," ").concat(o,">")+"<\/script>"}}if(n(e,HTMLLinkElement)){var l=document.createElement("link");return l.rel=e.rel||"stylesheet",e.as&&(l.as=e.as),l.href=t.url,r&&(l.crossOrigin=r),t.times&&(l.dataset.rbRetryTimes=String(t.times)),void 0!==t.originalQuery&&(l.dataset.rbOriginalQuery=t.originalQuery),{element:l,str:'<link rel="'.concat(l.rel,'" href="').concat(t.url,'" ').concat(i," ").concat(a," ").concat(l.as?'as="'.concat(l.as,'"'):""," ").concat(o,"></link>")}}}(l,w),h={times:_,domain:f,url:d,tagName:u,isAsyncChunk:!1};"function"==typeof r.onRetry&&r.onRetry(h);var O="function"==typeof r.delay?r.delay(h):r.delay;O>0?setTimeout(function(){a(l,L,w)},O):a(l,L,w)}}}}(o,r)}catch(e){console.error("retry error captured",e)}},!0),document.addEventListener("load",function(t){if(t&&n(t.target,Element))try{!function(t,n){var r=i(t,n);if(!1!==r){var a=r.target,o=r.tagName,c=r.url,s=e(c,t),l=Number(a.dataset.rbRetryTimes)||0;0!==l&&"function"==typeof t.onSuccess&&t.onSuccess({times:l,domain:s,url:c,tagName:o,isAsyncChunk:!1})}}(o,t)}catch(e){console.error("load error captured",e)}},!0))}catch(e){console.error("monitor error captured",e)}}();</script><script defer="" src="/games/chicken-road-2/static/js/lib-axios.ecbfe206.js"></script><script defer="" src="/games/chicken-road-2/static/js/lib-react.66956bcc.js"></script><script defer="" src="/games/chicken-road-2/static/js/365.9a6835ae.js"></script><script defer="" src="/games/chicken-road-2/static/js/index.8685e868.js"></script><link href="/games/chicken-road-2/static/css/365.59b0d2f2.css" rel="stylesheet"><link href="/games/chicken-road-2/static/css/index.7050685e.css" rel="stylesheet"><script async="" src="https://static.hotjar.com/c/hotjar-5333437.js?sv=6"></script><style data-styled="active" data-styled-version="6.1.1"></style><style data-styled="active" data-styled-version="6.4.2"></style><style id="__clean_fun_mode_css__">
+  .fun-mode, [class*="fun-mode"], [class*="demo-mode"], [id*="fun-mode"], [id*="demo-mode"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    pointer-events: none !important;
+  }
+</style>
+<script id="__clean_fun_mode_js__">
+(function() {
+  function removeFunDemoText() {
+    try {
+      var root = document.body || document.documentElement;
+      if (!root) return;
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+      var node;
+      while ((node = walker.nextNode())) {
+        if (node.nodeValue && /(fun\s*mode|demo\s*mode|play\s*for\s*fun)/i.test(node.nodeValue)) {
+          node.nodeValue = node.nodeValue.replace(/(fun\s*mode|demo\s*mode|play\s*for\s*fun)/gi, '');
+        }
+      }
+    } catch(e) {}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      removeFunDemoText();
+      setInterval(removeFunDemoText, 1000);
+    });
+  } else {
+    removeFunDemoText();
+    setInterval(removeFunDemoText, 1000);
+  }
+})();
+</script>
+</head>
+  <body>
+    <div id="root"><div style="position: absolute; left: 0px; top: 0px; width: 100vw; height: 100vh; z-index: 9999;"><div class="ThemeBackground-bYjHVH ktPYIh"><div class="LoaderWrapper-fqLArS iAxhuO"><div class="LoaderContent-epmsxo hjBMCQ"><img src="/games/chicken-road-2/static/svg/logo-vendor.2ec2a0c2.svg" class="LoaderLogo-jCEEDu kgWtCd"><div class="LoaderProgressDiv-cKGajH gcMNKR"><div class="LoaderIcon-eryYPe gkXoHn"></div><span>Loading...</span></div></div></div></div></div><div class="ThemeBackground-bYjHVH ktPYIh"><header class="HeaderContainer-hdAPM kmmbMV"><div class="HeaderLogo-hirFpA gkfSIj"><img src="/games/chicken-road-2/static/svg/logo.ac3f4929.svg" alt=""></div><div class="HeaderContent-wIgcm iozbnl"><div data-testid="menu-how-to-play" class="WrapperHowToPlay-koJtxI bediNh"><span class="IconWrapper-fAEkoI hFpqWR"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" transform="rotate(180)" class="iconDiver pointer strokeHover"><path d="M7.96834 1.3335C4.30967 1.3335 1.33301 4.32416 1.33301 8.00016C1.33301 11.6762 4.32367 14.6668 7.99967 14.6668C11.6757 14.6668 14.6663 11.6762 14.6663 8.00016C14.6663 4.32416 11.6617 1.3335 7.96834 1.3335ZM7.99967 13.3335C5.05901 13.3335 2.66634 10.9408 2.66634 8.00016C2.66634 5.0595 5.04434 2.66683 7.96834 2.66683C10.927 2.66683 13.333 5.0595 13.333 8.00016C13.333 10.9408 10.9403 13.3335 7.99967 13.3335Z" fill="white"></path><path d="M7.33301 4.6665H8.66634V9.33317H7.33301V4.6665ZM7.33301 9.99984H8.66634V11.3332H7.33301V9.99984Z" fill="white"></path></svg></span><span class="how-to-play-text">How to play?</span></div><div data-testid="menu-balance" class="WrapperAmount-mKwKT hFLEaE">0.00<svg width="18" height="18" viewBox="0 0 18 18" style="fill: rgb(255, 255, 255);"><use xlink:href="/games/chicken-road-2/static/svg/sprite.4de80bac.svg#INR"></use></svg></div><div data-testid="menu-fullscreen" class="WrapperFullscreen-blopHk lbUvis"><svg width="12" height="13" viewBox="0 0 12 13" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.33268 5.1665L11.3327 1.1665M11.3327 1.1665H8.33268M11.3327 1.1665V4.1665M0.666016 1.1665L4.66602 5.1665M0.666016 1.1665V4.1665M0.666016 1.1665H3.66602M7.33268 7.83317L11.3327 11.8332M11.3327 11.8332V8.83317M11.3327 11.8332H8.33268M4.66602 7.83317L0.666016 11.8332M0.666016 11.8332H3.66602M0.666016 11.8332L0.666016 8.83317" stroke="white" stroke-linecap="round" stroke-linejoin="round"></path></svg></div><div class="HeaderMenuWrapper-bxtuFr bQtYic"><div class="HeaderMenuWrapperIcon-koJoiw bAzyEG burger" data-testid="burger-menu"><svg class="burger" width="24" height="25" viewBox="0 0 24 25" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.125 18.875H19.875M4.125 12.875H19.875M4.125 6.875H19.875" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg></div></div></div></header><div class="UIRootDiv-bHWLcl yJbyS"><div class="Toastify"></div><div class="ModalWrapperStyled-gDjOBT kwmzjp exited modal-wrapper"><div></div></div><div class="ChickenRoadGameUIRoot-hGuWyV fNiMkx"><div class="GameBlockContainer-bKXLGs gRWDqw game"><div class="GameViewport-kVcfEW bNQigd"><div class="StageContainer-eDvSCX jhXGsM"><canvas width="0" height="0" style="touch-action: none; width: 0px; height: 0px;"></canvas></div></div></div><div class="ResizableBlockOverflow-bvTeyQ jCQzRu" style="width: 1226.84px; height: 134.952px; padding: 36.8051px 0px 24.5367px;"><div class="ResizableBlockContainer-hUKgjD fyiOix" style="transform: scale(1.02236); width: 1200px; height: 132px;"></div></div></div></div><div class="LiveWinsContainer-ligziG cayoXH"><div class="TitleLine-jgBFsu fnLFrf"><span>Live wins:</span><div class="OnlineBlock-kDuoXq cQLZoC"><div class="SignalWrapper-AmKGV fmVlUc"><div class="SignalPulse-jugNgB fNtWsX"></div><div class="SignalBase-a-DVzL isOWMq"></div></div><span>Online: </span><span class="OnlineCount-eQvIfk gtiLFy">0</span></div></div><div class="UserLine-eJBrdr hRdVlM"><div class="ElementRoot-eiJGQs kVGjBK"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAZCAYAAAArK+5dAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAL3SURBVHgBpVZNTBNBFH6z2263gLFIDCUxsDXGvwvFiFeXmPgTYtSLXtCUg2cx0XMpVzWoRy9g4snEQEKwMTG2PaASohYOQFDoCiolQrtGoGW33XFmYStIZyv0SzaZmffmfW9m3vdaBCWQSCQ8NZPjl12LyQZw8BJdy4luJQ8wuuQ/Fff5fIrdfsQy/A4PyM7FZFBILclI14r65CurADuc0ewBKbTnwsXofxHQjL0jQ33i7IwMO4Bes7/3u3w+9O+JthDg7qBk8BURTluTYBfAgqCgfKYF3Q4p1hpnDdLhsAQGv+vgFEjTSAwukgn3SdsI3OlkBDBIUC4wkoTpz30FUnPtQVeABO+x25ecUWAh8dUcV9d5of74ETt30GrrOl3Xb4YcG/Mg0zGbhciz54XgFmp9DdDSdg0E0VV0nyOV6iAF84jXnjwO8GvZAIvgff8gzE1MbVtfUX/Bz7lvcOhEY9F9yMiLYmZ5kuN07RIjNiynVZj+NMYym6daVlWmXVhIyhyfyUgsh9T8ApRC+gfbh1tdlTnsdPpZDlXVe6EUBLfItBkuQeJYbWCdwMN8RMtOH5sFTtNMHTAvURBFONl6jhmgufUslIKDKEElGvCwHGiVUKKxN7HCm3hJ1o1nTttmbwLjONVBlHwBOz8qKvpp2TVzbndtW4AQIUC4n8g7wPJJzSchRSplhZSjVZJVHg84yam8BxtgH1G1zRGihMCIAfB0Z+GaqHrHh4Zh4u0w6BtZs1BJKs26Mkr8NzZW0N3g0/VedK+rg7xFNx1/+TgKI4OvSgYuRtRMCqL+mNWjcADd2SAwp/dDkdmJKTlK+k45kNuuQv3Rw3GSfROdF9o16Eb7h5evFSgT714MKJAzrljzLb9oPSJIRNoRMpRgd1AMpLe0Z0GxFrjNVmqgDhhDL+wQGOCh4dabNgenYP6r6Kl0+pEOtxCy0QjGKkYQ5/LQeSOXixVzYRIUiDzg4bOORpw3/IC49TrEhkpEpBgV+Vi7ym41FH8AXuol/HOThVgAAAAASUVORK5CYII=" alt="User avatar" class="UserAvatar-jLsbUA ctvhDW"><img alt="Flag of EG" src="https://flagcdn.com/eg.svg" loading="lazy" decoding="async" class="FlagImage-fxGNHL bVXVsW"></div><span class="UserName-lcNNye euWTDC">Blue Liberal Grasshopper</span><span class="UserSum-gUqSVm TFdJD">+$2281.50</span></div></div><div class="Container-bnqCPs eQrEVH"></div></div></div>
+    <script type="text/javascript">
+      document.addEventListener(
+        'touchmove',
+        function (event) {
+          if (event.touches.length === 2) {
+            // two-finger touch prevent zoom
+            event.preventDefault();
+          }
+        },
+        { passive: false },
+      );
+    </script>
+    <script>
+      window.env = {
+        LAUNCHDARKLY_KEY: "66cd66a0ee056b104ba45da5",
+        VITE_TOLGEE_CDN: 'https://i18n.inout.games/1febfee655c493da075c27793d33b5f9',
+        VITE_API_ENDPOINT: "https://api.inout.games",
+        VITE_ASSETS_ENDPOINT: "https://inout-assets.s3.eu-central-1.amazonaws.com",
+        VITE_SENTRY_DSN: "3964ad100bcc40b580ddeea8f15bae59",
+        VITE_SENTRY_URL: "sentry.inout.games",
+        VITE_HJID: "5.333437e+06",
+        VITE_SENTRY_ID: "4",
+        VITE_GAMES_BASE_URL: "inout.games",
+        RTP_VALUE: "0.98",
+      };
+    </script>
+  
+
+</body></html>

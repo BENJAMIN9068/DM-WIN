@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "gameMode": "megablock",
+    "team": "CometGames",
+    "version": "1.0.0",
+    "env": "prod",
+    "engine": "unity",
+    "isWhiteLabel": "false",
+    "hasBonusGame": false
+  },
+  "endpoints": {
+    "api": "https://api.inout.games",
+    "ws": "wss://game-api-v2.inout.games"
+  },
+  "assets": {
+    "assetPath": "/assets_logo"
+  },
+  "tolgee": {
+    "cdnUrl": "https://i18n.inout.games/c7e115147c8ed9b5034881f24e343c0b",
+    "apiUrl": "https://app.tolgee.io",
+    "apiKey": "TOLGEE_API_KEY__TGPAK"
+  },
+  "i18n": {
+    "keyPrefix": "megablock"
+  }
+}

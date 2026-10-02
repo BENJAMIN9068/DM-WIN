@@ -1,0 +1,1281 @@
+{
+  "data": {
+    "rebateratelist": [
+      {
+        "type": 1,
+        "rebate_Lv": 0,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.600000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.180000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.054000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.016200"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.004860"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.001458"
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "rebate_Lv": 1,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.700000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.245000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.085750"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.030012"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.010504"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.003677"
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "rebate_Lv": 2,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.750000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.281250"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.105469"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.039551"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.014832"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.005562"
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "rebate_Lv": 3,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.800000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.320000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.128000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.051200"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.020480"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.008192"
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "rebate_Lv": 4,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.850000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.361250"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.153531"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.065251"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.027732"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.011786"
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "rebate_Lv": 5,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.900000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.405000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.182250"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.082013"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.036906"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.016608"
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "rebate_Lv": 6,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "1.000000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.500000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.250000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.125000"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.062500"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.031250"
+          }
+        ]
+      }
+    ],
+    "dianzilist": [
+      {
+        "type": 2,
+        "rebate_Lv": 0,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.300000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.090000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.027000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.008100"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.002430"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.000729"
+          }
+        ]
+      },
+      {
+        "type": 2,
+        "rebate_Lv": 1,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.350000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.122500"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.042875"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.015006"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.005252"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.001838"
+          }
+        ]
+      },
+      {
+        "type": 2,
+        "rebate_Lv": 2,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.375000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.140625"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.052734"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.019775"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.007416"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.002781"
+          }
+        ]
+      },
+      {
+        "type": 2,
+        "rebate_Lv": 3,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.400000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.160000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.064000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.025600"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.010240"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.004096"
+          }
+        ]
+      },
+      {
+        "type": 2,
+        "rebate_Lv": 4,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.425000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.180625"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.076766"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.032625"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.013866"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.005893"
+          }
+        ]
+      },
+      {
+        "type": 2,
+        "rebate_Lv": 5,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.450000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.202500"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.091125"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.041006"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.018453"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.008304"
+          }
+        ]
+      },
+      {
+        "type": 2,
+        "rebate_Lv": 6,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.500000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.250000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.125000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.062500"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.031250"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.015625"
+          }
+        ]
+      }
+    ],
+    "shixunlist": [
+      {
+        "type": 3,
+        "rebate_Lv": 0,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.300000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.090000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.027000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.008100"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.002430"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.000729"
+          }
+        ]
+      },
+      {
+        "type": 3,
+        "rebate_Lv": 1,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.350000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.122500"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.042875"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.015006"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.005252"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.001838"
+          }
+        ]
+      },
+      {
+        "type": 3,
+        "rebate_Lv": 2,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.375000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.140625"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.052734"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.019775"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.007416"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.002781"
+          }
+        ]
+      },
+      {
+        "type": 3,
+        "rebate_Lv": 3,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.400000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.160000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.064000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.025600"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.010240"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.004096"
+          }
+        ]
+      },
+      {
+        "type": 3,
+        "rebate_Lv": 4,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.425000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.180625"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.076766"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.032625"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.013866"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.005893"
+          }
+        ]
+      },
+      {
+        "type": 3,
+        "rebate_Lv": 5,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.450000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.202500"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.091125"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.041006"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.018453"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.008304"
+          }
+        ]
+      },
+      {
+        "type": 3,
+        "rebate_Lv": 6,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.500000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.250000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.125000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.062500"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.031250"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.015625"
+          }
+        ]
+      }
+    ],
+    "tiyulist": [
+      {
+        "type": 4,
+        "rebate_Lv": 0,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.300000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.090000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.027000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.008100"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.002430"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.000729"
+          }
+        ]
+      },
+      {
+        "type": 4,
+        "rebate_Lv": 1,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.350000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.122500"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.042875"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.015006"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.005252"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.001838"
+          }
+        ]
+      },
+      {
+        "type": 4,
+        "rebate_Lv": 2,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.375000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.140625"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.052734"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.019775"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.007416"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.002781"
+          }
+        ]
+      },
+      {
+        "type": 4,
+        "rebate_Lv": 3,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.400000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.160000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.064000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.025600"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.010240"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.004096"
+          }
+        ]
+      },
+      {
+        "type": 4,
+        "rebate_Lv": 4,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.425000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.180625"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.076766"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.032625"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.013866"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.005893"
+          }
+        ]
+      },
+      {
+        "type": 4,
+        "rebate_Lv": 5,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.450000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.202500"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.091125"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.041006"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.018453"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.008304"
+          }
+        ]
+      },
+      {
+        "type": 4,
+        "rebate_Lv": 6,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.500000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.250000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.125000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.062500"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.031250"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.015625"
+          }
+        ]
+      }
+    ],
+    "xiaoyouxilist": [
+      {
+        "type": 5,
+        "rebate_Lv": 0,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.000000"
+          }
+        ]
+      },
+      {
+        "type": 5,
+        "rebate_Lv": 1,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.000000"
+          }
+        ]
+      },
+      {
+        "type": 5,
+        "rebate_Lv": 2,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.000000"
+          }
+        ]
+      },
+      {
+        "type": 5,
+        "rebate_Lv": 3,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.000000"
+          }
+        ]
+      },
+      {
+        "type": 5,
+        "rebate_Lv": 4,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.000000"
+          }
+        ]
+      },
+      {
+        "type": 5,
+        "rebate_Lv": 5,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.000000"
+          }
+        ]
+      },
+      {
+        "type": 5,
+        "rebate_Lv": 6,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.000000"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.000000"
+          }
+        ]
+      }
+    ],
+    "chesslist": [
+      {
+        "type": 6,
+        "rebate_Lv": 0,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.600000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.180000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.054000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.016200"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.004860"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.001458"
+          }
+        ]
+      },
+      {
+        "type": 6,
+        "rebate_Lv": 1,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.700000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.245000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.085750"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.030012"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.010504"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.003677"
+          }
+        ]
+      },
+      {
+        "type": 6,
+        "rebate_Lv": 2,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.750000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.281250"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.105469"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.039551"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.014832"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.005562"
+          }
+        ]
+      },
+      {
+        "type": 6,
+        "rebate_Lv": 3,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.800000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.320000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.128000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.051200"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.020480"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.008192"
+          }
+        ]
+      },
+      {
+        "type": 6,
+        "rebate_Lv": 4,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.850000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.361250"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.153531"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.065251"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.027732"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.011786"
+          }
+        ]
+      },
+      {
+        "type": 6,
+        "rebate_Lv": 5,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "0.900000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.405000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.182250"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.082013"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.036906"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.016608"
+          }
+        ]
+      },
+      {
+        "type": 6,
+        "rebate_Lv": 6,
+        "rebateLevels": [
+          {
+            "levelId": 1,
+            "amount": "1.000000"
+          },
+          {
+            "levelId": 2,
+            "amount": "0.500000"
+          },
+          {
+            "levelId": 3,
+            "amount": "0.250000"
+          },
+          {
+            "levelId": 4,
+            "amount": "0.125000"
+          },
+          {
+            "levelId": 5,
+            "amount": "0.062500"
+          },
+          {
+            "levelId": 6,
+            "amount": "0.031250"
+          }
+        ]
+      }
+    ]
+  },
+  "code": 0,
+  "msg": "Succeed",
+  "msgCode": 0,
+  "traceId": "",
+  "serviceNowTime": "2026-10-02 01:02:14"
+}

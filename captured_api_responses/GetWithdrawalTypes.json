@@ -1,0 +1,53 @@
+{
+  "data": {
+    "withdrawlist": [
+      {
+        "withdrawID": 1,
+        "name": "BANK CARD",
+        "isAdd": 0,
+        "withBeforeImgUrl": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/WithBeforeImgIcon_20260906213947tfhj.png",
+        "withAfterImgUrl": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/WithBeforeImgIcon2_202609062139475lgt.png",
+        "recommandWithAmount": "200,500,1000,2000,5000,10000,20000,50000",
+        "withdrawTip": "",
+        "need100": false
+      },
+      {
+        "withdrawID": 2,
+        "name": "UPI",
+        "isAdd": 0,
+        "withBeforeImgUrl": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/WithBeforeImgIcon_20260906214009fgwn.jpg",
+        "withAfterImgUrl": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/WithBeforeImgIcon2_20260906214009lgl2.jpg",
+        "recommandWithAmount": "200,500,2000,5000,10000,20000,30000,50000",
+        "withdrawTip": "",
+        "need100": false
+      },
+      {
+        "withdrawID": 3,
+        "name": "USDT",
+        "isAdd": 1,
+        "withBeforeImgUrl": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/WithBeforeImgIcon_20260906214020cxy9.png",
+        "withAfterImgUrl": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/WithBeforeImgIcon2_20260906214020q4n3.png",
+        "recommandWithAmount": "10,50,500,1000,2000,5000,10000,20000",
+        "withdrawTip": "",
+        "need100": false
+      },
+      {
+        "withdrawID": 21,
+        "name": "ARPay",
+        "isAdd": 0,
+        "withBeforeImgUrl": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/WithBeforeImgIcon_20260906214039bxlp.png",
+        "withAfterImgUrl": "https://ossimg.dmfirst9acting.com/dmfirst/payNameIcon/WithBeforeImgIcon2_2026090621403912kc.png",
+        "recommandWithAmount": "200,500,2000,5000,10000,20000,30000,50000",
+        "withdrawTip": "Supports UPI for fast payment, and bonuses for withdrawals",
+        "need100": false
+      }
+    ],
+    "isOpenSafeGuide": false,
+    "safeGuideContent": ""
+  },
+  "code": 0,
+  "msg": "Succeed",
+  "msgCode": 0,
+  "traceId": "",
+  "serviceNowTime": "2026-10-02 00:38:29"
+}

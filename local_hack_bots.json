@@ -1,0 +1,347 @@
+{
+  "unified": {
+    "wingo_30s": {
+      "name": "Win Go 30s",
+      "gameCode": "WinGo_30S",
+      "declaredResult": "9",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "number": 9,
+        "colour": "Green",
+        "bs": "Big",
+        "label": "9 (Green | Big)"
+      },
+      "issueNumber": "202610021884",
+      "overrideIssue": null
+    },
+    "wingo_1m": {
+      "name": "Win Go 1Min",
+      "gameCode": "WinGo_1M",
+      "declaredResult": "5",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:54:41",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "number": 5,
+        "colour": "Green,Violet",
+        "bs": "Big",
+        "label": "5 (Green,Violet | Big)"
+      },
+      "issueNumber": "202610020942",
+      "overrideIssue": null
+    },
+    "wingo_3m": {
+      "name": "Win Go 3Min",
+      "gameCode": "WinGo_3M",
+      "declaredResult": "4",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "number": 4,
+        "colour": "Red",
+        "bs": "Small",
+        "label": "4 (Red | Small)"
+      },
+      "issueNumber": "202610020314",
+      "overrideIssue": null
+    },
+    "wingo_5m": {
+      "name": "Win Go 5Min",
+      "gameCode": "WinGo_5M",
+      "declaredResult": "6",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "number": 6,
+        "colour": "Red",
+        "bs": "Big",
+        "label": "6 (Red | Big)"
+      },
+      "issueNumber": "202610020189",
+      "overrideIssue": null
+    },
+    "wingo_10m": {
+      "name": "Win Go 10Min",
+      "gameCode": "WinGo_10M",
+      "declaredResult": "5",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "number": 5,
+        "colour": "Green,Violet",
+        "bs": "Big",
+        "label": "5 (Green,Violet | Big)"
+      },
+      "issueNumber": "202610020095",
+      "overrideIssue": null
+    },
+    "k3_1m": {
+      "name": "K3 Lotre 1Min",
+      "gameCode": "K3_1M",
+      "declaredResult": "441",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "d1": 4,
+        "d2": 4,
+        "d3": 1,
+        "sum": 9,
+        "bs": "Small",
+        "isTriple": false,
+        "diceIcons": "⚃ ⚃ ⚀",
+        "label": "⚃ ⚃ ⚀ (Sum 9 - Small)"
+      },
+      "issueNumber": "202610020942",
+      "overrideIssue": null
+    },
+    "k3_3m": {
+      "name": "K3 Lotre 3Min",
+      "gameCode": "K3_3M",
+      "declaredResult": "144",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "d1": 1,
+        "d2": 4,
+        "d3": 4,
+        "sum": 9,
+        "bs": "Small",
+        "isTriple": false,
+        "diceIcons": "⚀ ⚃ ⚃",
+        "label": "⚀ ⚃ ⚃ (Sum 9 - Small)"
+      },
+      "issueNumber": "202610020314",
+      "overrideIssue": null
+    },
+    "k3_5m": {
+      "name": "K3 Lotre 5Min",
+      "gameCode": "K3_5M",
+      "declaredResult": "555",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "d1": 5,
+        "d2": 5,
+        "d3": 5,
+        "sum": 15,
+        "bs": "Big",
+        "isTriple": true,
+        "diceIcons": "⚄ ⚄ ⚄",
+        "label": "⚄ ⚄ ⚄ (Sum 15 - Big - Triple!)"
+      },
+      "issueNumber": "202610020189",
+      "overrideIssue": null
+    },
+    "k3_10m": {
+      "name": "K3 Lotre 10Min",
+      "gameCode": "K3_10M",
+      "declaredResult": "132",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "d1": 1,
+        "d2": 3,
+        "d3": 2,
+        "sum": 6,
+        "bs": "Small",
+        "isTriple": false,
+        "diceIcons": "⚀ ⚂ ⚁",
+        "label": "⚀ ⚂ ⚁ (Sum 6 - Small)"
+      },
+      "issueNumber": "202610020095",
+      "overrideIssue": null
+    },
+    "5d_1m": {
+      "name": "5D Lotre 1Min",
+      "gameCode": "5D_1M",
+      "declaredResult": "88109",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "digits": [
+          8,
+          8,
+          1,
+          0,
+          9
+        ],
+        "sum": 26,
+        "label": "[8 8 1 0 9] (Sum 26)"
+      },
+      "issueNumber": "202610020942",
+      "overrideIssue": null
+    },
+    "5d_3m": {
+      "name": "5D Lotre 3Min",
+      "gameCode": "5D_3M",
+      "declaredResult": "01971",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "digits": [
+          0,
+          1,
+          9,
+          7,
+          1
+        ],
+        "sum": 18,
+        "label": "[0 1 9 7 1] (Sum 18)"
+      },
+      "issueNumber": "202610020314",
+      "overrideIssue": null
+    },
+    "5d_5m": {
+      "name": "5D Lotre 5Min",
+      "gameCode": "5D_5M",
+      "declaredResult": "90649",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "digits": [
+          9,
+          0,
+          6,
+          4,
+          9
+        ],
+        "sum": 28,
+        "label": "[9 0 6 4 9] (Sum 28)"
+      },
+      "issueNumber": "202610020189",
+      "overrideIssue": null
+    },
+    "5d_10m": {
+      "name": "5D Lotre 10Min",
+      "gameCode": "5D_10M",
+      "declaredResult": "71937",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "digits": [
+          7,
+          1,
+          9,
+          3,
+          7
+        ],
+        "sum": 27,
+        "label": "[7 1 9 3 7] (Sum 27)"
+      },
+      "issueNumber": "202610020095",
+      "overrideIssue": null
+    },
+    "trx_wingo_1m": {
+      "name": "TRX Win Go 1Min",
+      "gameCode": "TRX_1M",
+      "declaredResult": "7",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "number": 7,
+        "colour": "Green",
+        "bs": "Big",
+        "label": "7 (Green | Big)"
+      },
+      "issueNumber": "202610020942",
+      "overrideIssue": null
+    },
+    "trx_wingo_3m": {
+      "name": "TRX Win Go 3Min",
+      "gameCode": "TRX_3M",
+      "declaredResult": "7",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "number": 7,
+        "colour": "Green",
+        "bs": "Big",
+        "label": "7 (Green | Big)"
+      },
+      "issueNumber": "202610020314",
+      "overrideIssue": null
+    },
+    "trx_wingo_5m": {
+      "name": "TRX Win Go 5Min",
+      "gameCode": "TRX_5M",
+      "declaredResult": "9",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "number": 9,
+        "colour": "Green",
+        "bs": "Big",
+        "label": "9 (Green | Big)"
+      },
+      "issueNumber": "202610020189",
+      "overrideIssue": null
+    },
+    "trx_wingo_10m": {
+      "name": "TRX Win Go 10Min",
+      "gameCode": "TRX_10M",
+      "declaredResult": "3",
+      "status": "Running (Auto-Predict)",
+      "lockThresholdSeconds": 6,
+      "lastDeclaredAt": "2026-10-02 08:38:57",
+      "locked": false,
+      "source": "Unified Server Engine (Auto 6s Sync)",
+      "details": {
+        "number": 3,
+        "colour": "Green",
+        "bs": "Small",
+        "label": "3 (Green | Small)"
+      },
+      "issueNumber": "202610020095",
+      "overrideIssue": null
+    }
+  },
+  "userSpecific": []
+}

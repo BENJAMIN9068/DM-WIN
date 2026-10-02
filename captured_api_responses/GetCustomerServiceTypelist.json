@@ -1,0 +1,14 @@
+{
+  "data": [
+    {
+      "typeID": 3,
+      "typeName": "LiveChat",
+      "imageUrl": null
+    }
+  ],
+  "code": 0,
+  "msg": "Succeed",
+  "msgCode": 0,
+  "traceId": "",
+  "serviceNowTime": "2026-10-02 00:39:08"
+}

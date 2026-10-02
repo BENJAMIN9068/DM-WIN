@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>MegaBlock Empire</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        overscroll-behavior: none;
+        background-color: rgb(28, 34, 42);
+      }
+      #fit-root {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Luckiest Guy тут больше нет: самохостится через @font-face в
+         src/App.styles.ts (см. комментарий там — от него зависит центрирование
+         цифры фри-спинов, фолбэк ломает геометрию). -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Nunito:wght@400;500;600;700;800;900&family=Roboto+Flex:opsz,wght@8..144,100..1000&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div
+      id="fit-root"
+      style="margin:auto; position:relative; overflow:hidden; transform:translateZ(0);"
+    >
+      <div id="root"></div>
+    </div>
+    <!--
+      Слои-порталы для модалок. Лежат прямо в <body> (не внутри #fit-root),
+      чтобы выйти из stacking-контекстов #fit-root (transform) и ThemeBackground
+      (transform) — иначе системные модалки оказываются «заперты» под игровыми.
+      Порядок задаётся ИМЕННО здесь, один раз: игровые (spine win-модалки) ниже,
+      системные (info-модалки) выше. Внутри каждого слоя z-index локален.
+      TransitionScreen намеренно НЕ тут — у него свой полноэкранный портал с
+      максимальным z-index, он перекрывает вообще всё.
+    -->
+    <div id="game-modal-layer" style="position:fixed; inset:0; z-index:1000; pointer-events:none;"></div>
+    <div id="system-modal-layer" style="position:fixed; inset:0; z-index:2000; pointer-events:none;"></div>
+    <script type="module" src="./1789360625894-main.js"></script>
+    <script>
+      (function () {
+        // Global anti-zoom guard for mobile browsers (pinch, double-tap, gesture zoom).
+        function blockZoomGesture(event) {
+          if (event.cancelable) {
+            event.preventDefault();
+          }
+        }
+
+        function isInteractiveTouchTarget(target) {
+          if (!target || !(target instanceof Element)) return false;
+          return Boolean(
+            target.closest("input, textarea, select, button, a, label, canvas, [role='button'], [contenteditable='true']"),
+          );
+        }
+
+        document.addEventListener("gesturestart", blockZoomGesture, { passive: false });
+        document.addEventListener("gesturechange", blockZoomGesture, { passive: false });
+        document.addEventListener("gestureend", blockZoomGesture, { passive: false });
+
+        // Disable long-press context menu / text selection magnifier on any
+        // non-editable element. We keep it enabled for inputs/textareas so
+        // the user can still reach the keyboard's own cursor UI.
+        document.addEventListener("contextmenu", function (event) {
+          var target = event.target;
+          if (isInteractiveTouchTarget(target) && target instanceof HTMLElement) {
+            var tag = target.tagName;
+            if (tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable) {
+              return;
+            }
+          }
+          if (event.cancelable) {
+            event.preventDefault();
+          }
+        }, { passive: false });
+
+        document.addEventListener("touchstart", function (event) {
+          if (event.touches && event.touches.length > 1) {
+            blockZoomGesture(event);
+          }
+        }, { passive: false });
+
+        document.addEventListener("touchmove", function (event) {
+          if (event.touches && event.touches.length > 1) {
+            blockZoomGesture(event);
+          }
+        }, { passive: false });
+
+        var lastSingleTouchEnd = 0;
+        document.addEventListener("touchend", function (event) {
+          var now = Date.now();
+          if (now - lastSingleTouchEnd <= 300 && !isInteractiveTouchTarget(event.target)) {
+            blockZoomGesture(event);
+          }
+          lastSingleTouchEnd = now;
+        }, { passive: false });
+
+        window.addEventListener("wheel", function (event) {
+          if (event.ctrlKey) {
+            blockZoomGesture(event);
+          }
+        }, { passive: false });
+
+        function keepWindowAtTop() {
+          if (window.scrollX !== 0 || window.scrollY !== 0) {
+            window.scrollTo(0, 0);
+          }
+        }
+
+        keepWindowAtTop();
+        window.addEventListener("scroll", keepWindowAtTop, { passive: true });
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener("scroll", keepWindowAtTop);
+        }
+
+        function fit(container, minRatioW, minRatioH, maxRatioW, maxRatioH, viewportWidth, viewportHeight) {
+          var widthBase = Math.max(1, viewportWidth || window.innerWidth);
+          var heightBase = Math.max(1, viewportHeight || window.innerHeight);
+          var currentR = widthBase / heightBase;
+
+          var minR = minRatioW / minRatioH;
+          var maxR = maxRatioW / maxRatioH;
+
+          var clampedR = Math.min(Math.max(currentR, minR), maxR);
+
+          var width = widthBase;
+          var height = width / clampedR;
+
+          if (height > heightBase) {
+            width = Math.min(width, Math.ceil(heightBase * clampedR));
+          }
+
+          height = Math.floor(width / clampedR);
+
+          container.style.width = width + "px";
+          container.style.height = height + "px";
+
+          // header/logo scale based on fitted area height
+          var baseHeight = 900; // design reference height
+          var headerScale = container.clientHeight / baseHeight;
+          if (!isFinite(headerScale) || headerScale <= 0) headerScale = 1;
+          // clamp: not larger than 100% (no minimum floor)
+          headerScale = Math.min(1, headerScale);
+          document.documentElement.style.setProperty("--header-scale", String(headerScale));
+        }
+
+        var stableViewportWidth = window.innerWidth;
+        var stableViewportHeight = window.innerHeight;
+
+        function isEditableElement(element) {
+          if (!element || !(element instanceof HTMLElement)) return false;
+          if (element.isContentEditable) return true;
+          var tagName = element.tagName;
+          if (tagName === "TEXTAREA") {
+            return !element.readOnly && !element.disabled;
+          }
+          if (tagName !== "INPUT") return false;
+          var inputType = (element.type || "").toLowerCase();
+          if (element.readOnly || element.disabled) return false;
+          if (!inputType) return true;
+          return [
+            "text",
+            "search",
+            "tel",
+            "url",
+            "email",
+            "password",
+            "number"
+          ].indexOf(inputType) !== -1;
+        }
+
+        function isKeyboardLikelyOpen() {
+          var active = document.activeElement;
+          if (!isEditableElement(active)) return false;
+
+          var currentHeight = window.innerHeight;
+          if (stableViewportHeight - currentHeight > 90) {
+            return true;
+          }
+
+          if (!window.visualViewport) {
+            return false;
+          }
+
+          var vv = window.visualViewport;
+          var visualGap = Math.max(0, currentHeight - vv.height - vv.offsetTop);
+          return visualGap > 90;
+        }
+
+        function applyFit() {
+          var container = document.getElementById("fit-root");
+          if (!container) return;
+
+          var viewportWidth = window.innerWidth;
+          var viewportHeight = window.innerHeight;
+          var keyboardOpen = isKeyboardLikelyOpen();
+
+          if (keyboardOpen) {
+            viewportWidth = stableViewportWidth;
+            viewportHeight = stableViewportHeight;
+          } else {
+            stableViewportWidth = viewportWidth;
+            stableViewportHeight = viewportHeight;
+          }
+
+          fit(container, 1, 2340, 2620, 1, viewportWidth, viewportHeight);
+        }
+
+        var FOREGROUND_FIT_SETTLE_MS = 250;
+        var rafId = null;
+        var foregroundFitTimer = null;
+        var foregroundSettling = false;
+
+        var flushForegroundFit = function () {
+          foregroundFitTimer = null;
+          foregroundSettling = false;
+          applyFit();
+        };
+
+        var scheduleForegroundFit = function () {
+          if (foregroundFitTimer !== null) {
+            clearTimeout(foregroundFitTimer);
+          }
+          foregroundFitTimer = setTimeout(
+            flushForegroundFit,
+            FOREGROUND_FIT_SETTLE_MS
+          );
+        };
+
+        var scheduleFit = function () {
+          if (document.visibilityState === "hidden") return;
+          if (foregroundSettling) {
+            scheduleForegroundFit();
+            return;
+          }
+          if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+          }
+          rafId = requestAnimationFrame(function () {
+            rafId = null;
+            applyFit();
+          });
+        };
+
+        var beginForegroundFit = function () {
+          if (document.visibilityState === "hidden") return;
+          foregroundSettling = true;
+          if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+          }
+          scheduleForegroundFit();
+        };
+
+        var handleVisibilityChange = function () {
+          if (document.visibilityState === "hidden") {
+            if (rafId !== null) {
+              cancelAnimationFrame(rafId);
+              rafId = null;
+            }
+            if (foregroundFitTimer !== null) {
+              clearTimeout(foregroundFitTimer);
+              foregroundFitTimer = null;
+            }
+            return;
+          }
+          beginForegroundFit();
+        };
+
+        scheduleFit();
+        window.addEventListener("load", scheduleFit);
+        window.addEventListener("resize", scheduleFit);
+        window.addEventListener("orientationchange", scheduleFit);
+        window.addEventListener("pageshow", beginForegroundFit);
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        document.addEventListener("focusin", scheduleFit, true);
+        document.addEventListener("focusout", function () {
+          setTimeout(scheduleFit, 60);
+        }, true);
+
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener("resize", scheduleFit);
+        }
+
+        if ("ResizeObserver" in window) {
+          var resizeObserver = new ResizeObserver(scheduleFit);
+          resizeObserver.observe(document.documentElement);
+        }
+      })();
+    </script>
+  </body>
+</html>

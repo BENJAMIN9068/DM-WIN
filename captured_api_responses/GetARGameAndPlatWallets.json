@@ -1,0 +1,21 @@
+{
+  "data": {
+    "thidGameBalanceList": [
+      {
+        "vendorCode": "ARGame",
+        "balance": 0
+      },
+      {
+        "vendorCode": "Lottery",
+        "balance": 0
+      }
+    ],
+    "totalWithdraw": 0,
+    "totalRecharge": 0
+  },
+  "code": 0,
+  "msg": "Succeed",
+  "msgCode": 0,
+  "traceId": "",
+  "serviceNowTime": "2026-10-02 00:38:26"
+}

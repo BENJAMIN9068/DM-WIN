@@ -1,0 +1,54 @@
+{
+  "data": {
+    "gameStatis": [
+      {
+        "gameType": 0,
+        "gameTypeName": "lottery",
+        "betAmount": 0,
+        "betCount": 0,
+        "betWinLossAmount": 0
+      },
+      {
+        "gameType": 1,
+        "gameTypeName": "video",
+        "betAmount": 0,
+        "betCount": 0,
+        "betWinLossAmount": 0
+      },
+      {
+        "gameType": 2,
+        "gameTypeName": "Slot",
+        "betAmount": 0,
+        "betCount": 0,
+        "betWinLossAmount": 0
+      },
+      {
+        "gameType": 3,
+        "gameTypeName": "Fish",
+        "betAmount": 0,
+        "betCount": 0,
+        "betWinLossAmount": 0
+      },
+      {
+        "gameType": 4,
+        "gameTypeName": "sport",
+        "betAmount": 0,
+        "betCount": 0,
+        "betWinLossAmount": 0
+      },
+      {
+        "gameType": 5,
+        "gameTypeName": "ChessCard",
+        "betAmount": 0,
+        "betCount": 0,
+        "betWinLossAmount": 0
+      }
+    ],
+    "sumBetAmount": 0
+  },
+  "code": 0,
+  "msg": "Succeed",
+  "msgCode": 0,
+  "traceId": "",
+  "serviceNowTime": "2026-10-02 00:38:55"
+}

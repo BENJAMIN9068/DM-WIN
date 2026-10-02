@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>UPI x QR | High-Speed Cyber Gateway</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111726;
+      --primary: #00f2fe;
+      --secondary: #4facfe;
+      --accent: #a855f7;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #1e293b;
+      --error: #ef4444;
+      --success: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Space Grotesk', sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 14px; }
+    .wrapper { width: 100%; max-width: 440px; margin: 0 auto; }
+
+    /* Header */
+    .header { background: var(--card-bg); border-radius: 18px; padding: 16px 20px; border: 1px solid rgba(0, 242, 254, 0.2); box-shadow: 0 0 25px rgba(0, 242, 254, 0.08); display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; position: relative; overflow: hidden; }
+    .header::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #00f2fe, #a855f7); }
+    .header-logo { display: flex; align-items: center; gap: 10px; }
+    .logo-glow { width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, #00f2fe, #a855f7); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; color: #000; box-shadow: 0 0 15px rgba(0,242,254,0.4); }
+    .header-title { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
+    .header-sub { font-size: 11px; color: var(--primary); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+    .timer-pill { background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.3); color: var(--primary); font-weight: 700; font-size: 13px; padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 6px; }
+
+    /* Main Card */
+    .card { background: var(--card-bg); border-radius: 22px; padding: 24px; border: 1px solid var(--border); box-shadow: 0 10px 35px rgba(0,0,0,0.5); position: relative; }
+
+    /* 1. Large QR Code Display */
+    .qr-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+    .qr-box { width: 220px; height: 220px; border-radius: 18px; padding: 12px; background: #ffffff; border: 2px solid var(--primary); box-shadow: 0 0 30px rgba(0, 242, 254, 0.25); position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .qr-box img { width: 100%; height: 100%; object-fit: contain; border-radius: 10px; }
+    /* Laser Scan Animation */
+    .laser-line { position: absolute; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, #00f2fe, transparent); box-shadow: 0 0 12px #00f2fe; animation: laserSweep 2.2s infinite ease-in-out; pointer-events: none; }
+    @keyframes laserSweep { 0% { top: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+
+    .scan-status { margin-top: 12px; font-size: 12px; font-weight: 600; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 10px #10b981; animation: pulseDot 1.5s infinite; }
+    @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* 2. Amount Display */
+    .amount-box { background: linear-gradient(135deg, rgba(0, 242, 254, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%); border: 1.5px solid rgba(0, 242, 254, 0.3); border-radius: 16px; padding: 16px; text-align: center; margin-bottom: 20px; }
+    .amount-label { font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px; }
+    .amount-val { font-size: 34px; font-weight: 800; color: #ffffff; text-shadow: 0 0 20px rgba(0, 242, 254, 0.4); letter-spacing: -0.5px; }
+
+    /* Inputs (3. UTR, 4. Full Name) */
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: #cbd5e1; margin-bottom: 6px; }
+    .form-label span.req { color: var(--error); }
+    .form-input { width: 100%; height: 50px; border: 1.5px solid var(--border); border-radius: 12px; padding: 0 14px; font-size: 15px; font-weight: 600; color: #fff; background: #0c121e; outline: none; transition: all 0.2s; }
+    .form-input:focus { border-color: var(--primary); box-shadow: 0 0 15px rgba(0, 242, 254, 0.25); background: #131c2e; }
+    .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+
+    /* 5. Screenshot Upload */
+    .upload-area { border: 2px dashed rgba(0, 242, 254, 0.3); border-radius: 14px; padding: 18px; text-align: center; cursor: pointer; background: #0c121e; transition: all 0.2s; position: relative; }
+    .upload-area:hover, .upload-area.dragover { border-color: var(--primary); background: rgba(0, 242, 254, 0.05); }
+    .upload-icon { width: 36px; height: 36px; stroke: var(--primary); margin: 0 auto 6px; }
+    .upload-text { font-size: 13px; font-weight: 700; color: #e2e8f0; }
+    .upload-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .upload-preview { display: none; margin-top: 10px; width: 100%; max-height: 140px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border); }
+    .file-input { display: none; }
+
+    /* 6. Submit Button */
+    .submit-btn { width: 100%; height: 54px; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 50%, #a855f7 100%); color: #000; border: none; border-radius: 14px; font-size: 16px; font-weight: 800; cursor: pointer; transition: all 0.2s; box-shadow: 0 0 25px rgba(0, 242, 254, 0.4); display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 18px; }
+    .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 0 35px rgba(0, 242, 254, 0.6); }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* Server Down State */
+    .server-down-card { display: none; background: var(--card-bg); border-radius: 22px; padding: 40px 24px; text-align: center; border: 1px solid rgba(239, 68, 68, 0.3); box-shadow: 0 0 30px rgba(239, 68, 68, 0.2); }
+    .down-icon { width: 64px; height: 64px; fill: var(--error); margin: 0 auto 16px; }
+    .down-title { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+    .down-msg { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px; }
+    .back-btn { display: inline-block; padding: 12px 28px; background: linear-gradient(135deg, #334155, #1e293b); color: #fff; font-weight: 700; font-size: 14px; border-radius: 12px; text-decoration: none; border: 1px solid #475569; }
+
+    /* Success / Pending Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 16px; }
+    .modal-box { background: var(--card-bg); border-radius: 22px; max-width: 380px; width: 100%; padding: 30px 24px; text-align: center; border: 1px solid rgba(0, 242, 254, 0.3); box-shadow: 0 0 40px rgba(0,242,254,0.3); }
+    .modal-icon-wrap { width: 64px; height: 64px; border-radius: 50%; background: rgba(0, 242, 254, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; border: 1px solid var(--primary); }
+    .modal-title { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+    .modal-desc { font-size: 13px; color: #94a3b8; line-height: 1.6; margin-bottom: 20px; }
+    .status-tag { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); margin-bottom: 16px; }
+    .modal-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; font-weight: 800; border-radius: 12px; border: none; font-size: 15px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-logo">
+        <div class="logo-glow">X</div>
+        <div>
+          <div class="header-title">UPI x QR CyberPay</div>
+          <div class="header-sub">Instant Matrix Routing</div>
+        </div>
+      </div>
+      <div class="timer-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span id="countdown">09:59</span>
+      </div>
+    </div>
+
+    <!-- Server Down Card (Displayed if Gateway is OFF) -->
+    <div id="server-down-card" class="server-down-card">
+      <svg class="down-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      <h2 class="down-title">Server Down</h2>
+      <p class="down-msg">Cannot Accept Payment. The UPI x QR routing nodes are currently undergoing automated maintenance. Please choose another channel.</p>
+      <a href="/#/wallet" class="back-btn">Return to Wallet</a>
+    </div>
+
+    <!-- Active Payment Card -->
+    <div id="payment-card" class="card">
+      <form id="payment-form">
+        <!-- 1. Large QR Code Display -->
+        <div class="qr-container">
+          <div class="qr-box">
+            <div class="laser-line"></div>
+            <img id="qr-image" src="/uploads/gateways/upix_qr.svg" alt="Scan UPI x QR">
+          </div>
+          <div class="scan-status">
+            <span class="status-dot"></span>
+            Scan & Pay with Any UPI Application
+          </div>
+        </div>
+
+        <!-- 2. Amount Display -->
+        <div class="amount-box">
+          <div class="amount-label">Verified Order Amount</div>
+          <div class="amount-val" id="amount-display">₹500.00</div>
+        </div>
+
+        <!-- 3. UTR Number Input (Strict 10-12 Digits Only) -->
+        <div class="form-group">
+          <label class="form-label">
+            <span>UTR / Ref Transaction Number <span class="req">*</span></span>
+            <span id="utr-counter" style="color: var(--primary);">0/12</span>
+          </label>
+          <div class="form-input-wrap">
+            <input type="text" id="utr-input" class="form-input" placeholder="Enter 10-12 digit UTR Number" maxlength="12" inputmode="numeric" autocomplete="off" required>
+          </div>
+          <div class="form-hint">Enter the 10-12 digit UPI reference ID from your banking app.</div>
+        </div>
+
+        <!-- 4. Full Name Input -->
+        <div class="form-group">
+          <label class="form-label">
+            <span>Sender Full Name <span class="req">*</span></span>
+          </label>
+          <div class="form-input-wrap">
+            <input type="text" id="name-input" class="form-input" placeholder="Full name registered on UPI" required>
+          </div>
+        </div>
+
+        <!-- 5. Payment Screenshot Upload -->
+        <div class="form-group">
+          <label class="form-label">
+            <span>Payment Receipt Screenshot <span class="req">*</span></span>
+          </label>
+          <div class="upload-area" id="upload-dropzone">
+            <svg class="upload-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <div class="upload-text" id="upload-label">Upload Transfer Proof</div>
+            <div class="upload-sub">Image File: JPG, PNG, WEBP (Max 5MB)</div>
+            <img id="screenshot-preview" class="upload-preview" alt="Preview">
+            <input type="file" id="screenshot-file" class="file-input" accept="image/*" required>
+          </div>
+        </div>
+
+        <!-- 6. Submit Button -->
+        <button type="submit" id="submit-btn" class="submit-btn">
+          <span>Verify & Submit UTR</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Status / Success Modal -->
+  <div id="status-modal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-icon-wrap">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      </div>
+      <h3 class="modal-title">Order Received</h3>
+      <div class="status-tag">Status: Pending Verification</div>
+      <p class="modal-desc">Your UPI x QR transaction of <strong><span id="modal-amt"></span></strong> is awaiting admin approval. Funds will be credited to your game wallet upon verification.</p>
+      <button class="modal-btn" onclick="window.location.href='/#/wallet'">Return to Wallet</button>
+    </div>
+  </div>
+
+  <script>
+    const GATEWAY_ID = 'upixqr';
+    const params = new URLSearchParams(window.location.search);
+    const uid = params.get('uid') || '1677637';
+    const amount = parseFloat(params.get('amount')) || 500;
+    const token = params.get('token') || '';
+    const session = params.get('session') || '';
+
+    // Initialize UI
+    document.getElementById('amount-display').textContent = '₹' + amount.toFixed(2);
+    document.getElementById('modal-amt').textContent = '₹' + amount.toFixed(2);
+
+    // Timer
+    let totalSec = 599;
+    const countdownEl = document.getElementById('countdown');
+    setInterval(() => {
+      if (totalSec <= 0) return;
+      totalSec--;
+      const m = Math.floor(totalSec / 60).toString().padStart(2, '0');
+      const s = (totalSec % 60).toString().padStart(2, '0');
+      countdownEl.textContent = `${m}:${s}`;
+    }, 1000);
+
+    // Fetch Gateway Status
+    async function checkGateway() {
+      try {
+        const res = await fetch(`/api/gateways/status?gateway=${GATEWAY_ID}`);
+        const data = await res.json();
+        if (data && data.data) {
+          const gw = data.data;
+          if (!gw.enabled) {
+            document.getElementById('payment-card').style.display = 'none';
+            document.getElementById('server-down-card').style.display = 'block';
+            return;
+          }
+          if (gw.qrImage) {
+            document.getElementById('qr-image').src = gw.qrImage + '?t=' + Date.now();
+          }
+        }
+      } catch (e) {
+        console.warn('Gateway check error', e);
+      }
+    }
+    checkGateway();
+
+    // Strict UTR validation
+    const utrInput = document.getElementById('utr-input');
+    const utrCounter = document.getElementById('utr-counter');
+    utrInput.addEventListener('input', function() {
+      this.value = this.value.replace(/[^0-9]/g, '');
+      utrCounter.textContent = `${this.value.length}/12`;
+      if (this.value.length >= 10 && this.value.length <= 12) {
+        utrCounter.style.color = '#10b981';
+      } else {
+        utrCounter.style.color = '#00f2fe';
+      }
+    });
+
+    // File Upload handling
+    const dropzone = document.getElementById('upload-dropzone');
+    const fileInput = document.getElementById('screenshot-file');
+    const preview = document.getElementById('screenshot-preview');
+    const uploadLabel = document.getElementById('upload-label');
+    let screenshotBase64 = '';
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) handleFile(fileInput.files[0]);
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) {
+        alert('Please upload an image file (JPG, PNG, WEBP)');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        screenshotBase64 = e.target.result;
+        preview.src = screenshotBase64;
+        preview.style.display = 'block';
+        uploadLabel.textContent = file.name;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Submit handler
+    document.getElementById('payment-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const utr = utrInput.value.trim();
+      const name = document.getElementById('name-input').value.trim();
+
+      if (utr.length < 10 || utr.length > 12) {
+        alert('UTR Number must be strictly between 10 and 12 digits');
+        utrInput.focus();
+        return;
+      }
+      if (!name) {
+        alert('Please enter your full name');
+        return;
+      }
+      if (!screenshotBase64) {
+        alert('Please upload a screenshot of your payment');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = 'Transmitting Proof...';
+
+      try {
+        const res = await fetch('/api/recharge/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            gateway: 'UPI x QR',
+            userId: uid,
+            amount: amount,
+            utrNumber: utr,
+            fullName: name,
+            screenshot: screenshotBase64,
+            token: token,
+            session: session
+          })
+        });
+        const resData = await res.json();
+        if (resData.code === 0 || resData.result) {
+          document.getElementById('status-modal').style.display = 'flex';
+        } else {
+          alert(resData.msg || 'Failed to submit payment proof');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = 'Verify & Submit UTR';
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Transmission error. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Verify & Submit UTR';
+      }
+    });
+  </script>
+</body>
+</html>

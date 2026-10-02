@@ -1,0 +1,49 @@
+{
+  "data": [
+    {
+      "typeID": 30,
+      "typeName": "30 second",
+      "intervalM": 0.5,
+      "scope": "1|10|100|1000",
+      "betMultiple": "1|5|10|20|50|100",
+      "sort": 100,
+      "saasGameId": 10005,
+      "gameCode": "WinGo_30S"
+    },
+    {
+      "typeID": 1,
+      "typeName": "Win 1 minute",
+      "intervalM": 1,
+      "scope": "1|10|100|1000",
+      "betMultiple": "1|5|10|20|50|100",
+      "sort": 99,
+      "saasGameId": 10001,
+      "gameCode": "WinGo_1M"
+    },
+    {
+      "typeID": 2,
+      "typeName": "Win 3 minute",
+      "intervalM": 3,
+      "scope": "1|10|100|1000",
+      "betMultiple": "1|5|10|20|50|100",
+      "sort": 98,
+      "saasGameId": 10002,
+      "gameCode": "WinGo_3M"
+    },
+    {
+      "typeID": 3,
+      "typeName": "Win 5 minute",
+      "intervalM": 5,
+      "scope": "1|10|100|1000",
+      "betMultiple": "1|5|10|20|50|100",
+      "sort": 97,
+      "saasGameId": 10003,
+      "gameCode": "WinGo_5M"
+    }
+  ],
+  "code": 0,
+  "msg": "Succeed",
+  "msgCode": 0,
+  "traceId": "",
+  "serviceNowTime": "2026-10-02 00:38:39"
+}

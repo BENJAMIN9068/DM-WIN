@@ -1,0 +1,16 @@
+{
+  "name": "dmfirst-platform",
+  "version": "1.0.0",
+  "description": "Full-stack Gaming & Multi-Gateway Platform",
+  "main": "serve.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "node serve.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

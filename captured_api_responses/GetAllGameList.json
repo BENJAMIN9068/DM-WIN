@@ -1,0 +1,85 @@
+{
+  "code": 0,
+  "result": true,
+  "data": {
+    "lottery": [
+      {
+        "id": 1,
+        "name": "Win Go",
+        "gameName": "Win Go",
+        "gameNameEn": "Win Go",
+        "slotsName": "Win Go",
+        "categoryCode": "Win Go",
+        "categoryName": "Win Go",
+        "state": 1,
+        "sort": 0,
+        "categoryImg": "/dmfirst/lotterycategory/lotterycategory_20260828124739i4t5.png",
+        "gameCode": "WinGo_30S"
+      },
+      {
+        "id": 2,
+        "name": "K3",
+        "gameName": "K3",
+        "gameNameEn": "K3",
+        "slotsName": "K3",
+        "categoryCode": "K3",
+        "categoryName": "K3",
+        "state": 1,
+        "sort": 0,
+        "categoryImg": "/dmfirst/lotterycategory/lotterycategory_20260828124618bdoa.png",
+        "gameCode": "K3_1M"
+      },
+      {
+        "id": 3,
+        "name": "5D",
+        "gameName": "5D",
+        "gameNameEn": "5D",
+        "slotsName": "5D",
+        "categoryCode": "5D",
+        "categoryName": "5D",
+        "state": 1,
+        "sort": 0,
+        "categoryImg": "/dmfirst/lotterycategory/lotterycategory_2026082812462757nw.png",
+        "gameCode": "D5_1M"
+      },
+      {
+        "id": 4,
+        "name": "Trx Win Go",
+        "gameName": "Trx Win Go",
+        "gameNameEn": "Trx Win Go",
+        "slotsName": "Trx Win Go",
+        "categoryCode": "Trx Win Go",
+        "categoryName": "Trx Win Go",
+        "state": 1,
+        "sort": 0,
+        "categoryImg": "/dmfirst/lotterycategory/lotterycategory_20260828124639ur91.png",
+        "gameCode": "TrxWinGo_1M"
+      },
+      {
+        "id": 9,
+        "name": "MotoRace",
+        "gameName": "MotoRace",
+        "gameNameEn": "MotoRace",
+        "slotsName": "MotoRace",
+        "categoryCode": "MotoRace",
+        "categoryName": "MotoRace",
+        "state": 1,
+        "sort": 0,
+        "categoryImg": "/dmfirst/lotterycategory/lotterycategory_20260828124653sgg9.png",
+        "gameCode": "MotoRace_1M"
+      }
+    ],
+    "popular": {
+      "platformList": [],
+      "clicksTopList": []
+    },
+    "sport": [],
+    "video": [],
+    "slot": [],
+    "chess": [],
+    "fish": [],
+    "flash": [],
+    "awardRecordList": [],
+    "featureGame": []
+  }
+}

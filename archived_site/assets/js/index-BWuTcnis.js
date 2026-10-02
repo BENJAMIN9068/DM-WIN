@@ -1,0 +1,1 @@
+import{_ as e,H as n,I as i}from"./index-DSllDNEm.js";const s={};function t(a,c){return n(),i("div")}const o=e(s,[["render",t],["__file","/home/jenkins/agent/workspace/AR103-Pages-india-dmfirst/src/views/main/PointDetail/index.vue"]]);export{o as default};

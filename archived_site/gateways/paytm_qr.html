@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Paytm x QR | Verified Express Gateway</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paytm-navy: #002970;
+      --paytm-blue: #00baf2;
+      --paytm-dark: #001944;
+      --bg: #f3f7fa;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --error: #ef4444;
+      --success: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 12px; }
+    .wrapper { width: 100%; max-width: 440px; margin: 0 auto; }
+
+    /* Header */
+    .header { background: #ffffff; border-radius: 18px; padding: 14px 20px; box-shadow: 0 4px 15px rgba(0, 41, 112, 0.06); display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border-top: 4px solid var(--paytm-blue); }
+    .header-logo { display: flex; align-items: center; gap: 8px; }
+    .paytm-text { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; }
+    .paytm-navy { color: var(--paytm-navy); }
+    .paytm-cyan { color: var(--paytm-blue); }
+    .verified-badge { font-size: 11px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 3px 8px; border-radius: 6px; }
+    .timer-pill { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; font-weight: 700; font-size: 13px; padding: 5px 12px; border-radius: 20px; display: flex; align-items: center; gap: 6px; }
+
+    /* Main Card */
+    .card { background: var(--card-bg); border-radius: 20px; padding: 22px; box-shadow: 0 8px 30px rgba(0, 41, 112, 0.08); border: 1px solid rgba(0,0,0,0.04); }
+
+    /* 1. Large QR Code Display */
+    .qr-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 18px; }
+    .qr-box { width: 220px; height: 220px; border-radius: 18px; padding: 12px; background: #ffffff; border: 2.5px solid var(--paytm-navy); box-shadow: 0 8px 25px rgba(0, 41, 112, 0.12); position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .qr-box img { width: 100%; height: 100%; object-fit: contain; border-radius: 10px; }
+    .soundbox-tag { margin-top: 10px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--paytm-navy); background: #f0f9ff; padding: 5px 12px; border-radius: 20px; border: 1px solid #bae6fd; }
+
+    /* 2. Amount Display */
+    .amount-box { background: linear-gradient(135deg, #002970 0%, #001944 100%); border-radius: 16px; padding: 16px; text-align: center; margin-bottom: 18px; color: #ffffff; box-shadow: 0 6px 20px rgba(0, 41, 112, 0.25); }
+    .amount-label { font-size: 11px; font-weight: 700; color: var(--paytm-blue); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+    .amount-val { font-size: 34px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; }
+
+    /* Inputs (3. UTR, 4. Full Name) */
+    .form-group { margin-bottom: 15px; }
+    .form-label { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+    .form-label span.req { color: var(--error); }
+    .form-input { width: 100%; height: 48px; border: 1.5px solid var(--border); border-radius: 12px; padding: 0 14px; font-size: 15px; font-weight: 600; color: var(--text); background: #f8fafc; outline: none; transition: all 0.2s; }
+    .form-input:focus { border-color: var(--paytm-blue); background: #ffffff; box-shadow: 0 0 0 3px rgba(0, 186, 242, 0.15); }
+    .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    /* 5. Screenshot Upload */
+    .upload-area { border: 2px dashed #94a3b8; border-radius: 14px; padding: 16px; text-align: center; cursor: pointer; background: #f8fafc; transition: all 0.2s; position: relative; }
+    .upload-area:hover, .upload-area.dragover { border-color: var(--paytm-blue); background: #f0f9ff; }
+    .upload-icon { width: 36px; height: 36px; stroke: var(--paytm-navy); margin: 0 auto 6px; }
+    .upload-text { font-size: 13px; font-weight: 700; color: #1e293b; }
+    .upload-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .upload-preview { display: none; margin-top: 10px; width: 100%; max-height: 140px; object-fit: contain; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .file-input { display: none; }
+
+    /* 6. Submit Button */
+    .submit-btn { width: 100%; height: 52px; background: linear-gradient(135deg, var(--paytm-navy) 0%, #001f54 100%); color: #ffffff; border: none; border-radius: 14px; font-size: 16px; font-weight: 800; cursor: pointer; transition: all 0.2s; box-shadow: 0 6px 20px rgba(0, 41, 112, 0.25); display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; }
+    .submit-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(0, 41, 112, 0.35); }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* Server Down State */
+    .server-down-card { display: none; background: #ffffff; border-radius: 20px; padding: 40px 24px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.08); border-top: 4px solid var(--error); }
+    .down-icon { width: 64px; height: 64px; fill: var(--error); margin: 0 auto 16px; }
+    .down-title { font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 8px; }
+    .down-msg { font-size: 14px; color: var(--text-muted); line-height: 1.5; margin-bottom: 24px; }
+    .back-btn { display: inline-block; padding: 12px 28px; background: var(--paytm-navy); color: #fff; font-weight: 700; font-size: 14px; border-radius: 12px; text-decoration: none; }
+
+    /* Success / Pending Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 41, 112, 0.7); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 16px; }
+    .modal-box { background: #fff; border-radius: 20px; max-width: 380px; width: 100%; padding: 28px 24px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.25); }
+    .modal-icon-wrap { width: 60px; height: 60px; border-radius: 50%; background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+    .modal-title { font-size: 19px; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
+    .modal-desc { font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 20px; }
+    .status-tag { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; background: #fef3c7; color: #b45309; margin-bottom: 16px; }
+    .modal-btn { width: 100%; padding: 12px; background: var(--paytm-navy); color: #fff; font-weight: 700; border-radius: 12px; border: none; font-size: 14px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-logo">
+        <div class="paytm-text">
+          <span class="paytm-navy">pay</span><span class="paytm-cyan">tm</span>
+        </div>
+        <span class="verified-badge">Verified Merchant</span>
+      </div>
+      <div class="timer-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span id="countdown">09:59</span>
+      </div>
+    </div>
+
+    <!-- Server Down Card (Displayed if Gateway is OFF) -->
+    <div id="server-down-card" class="server-down-card">
+      <svg class="down-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      <h2 class="down-title">Server Down</h2>
+      <p class="down-msg">Cannot Accept Payment. Paytm settlement server is temporarily unavailable. Please switch to another payment method.</p>
+      <a href="/#/wallet" class="back-btn">Return to Wallet</a>
+    </div>
+
+    <!-- Active Payment Card -->
+    <div id="payment-card" class="card">
+      <form id="payment-form">
+        <!-- 1. Large QR Code Display -->
+        <div class="qr-container">
+          <div class="qr-box">
+            <img id="qr-image" src="/uploads/gateways/paytm_qr.svg" alt="Scan Paytm QR">
+          </div>
+          <div class="soundbox-tag">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+            Paytm Soundbox Instant Confirmation
+          </div>
+        </div>
+
+        <!-- 2. Amount Display -->
+        <div class="amount-box">
+          <div class="amount-label">Payable Amount</div>
+          <div class="amount-val" id="amount-display">₹500.00</div>
+        </div>
+
+        <!-- 3. UTR Number Input (Strict 10-12 Digits Only) -->
+        <div class="form-group">
+          <label class="form-label">
+            <span>Paytm Ref / UPI UTR Number <span class="req">*</span></span>
+            <span id="utr-counter" style="font-size: 11px; color: var(--paytm-blue); font-weight: 700;">0/12</span>
+          </label>
+          <div class="form-input-wrap">
+            <input type="text" id="utr-input" class="form-input" placeholder="Enter 10-12 digit UTR Number" maxlength="12" inputmode="numeric" autocomplete="off" required>
+          </div>
+          <div class="form-hint">Find the 10-12 digit Reference ID in your Paytm payment receipt.</div>
+        </div>
+
+        <!-- 4. Full Name Input -->
+        <div class="form-group">
+          <label class="form-label">
+            <span>Payer Full Name <span class="req">*</span></span>
+          </label>
+          <div class="form-input-wrap">
+            <input type="text" id="name-input" class="form-input" placeholder="Enter name as registered on Paytm/UPI" required>
+          </div>
+        </div>
+
+        <!-- 5. Payment Screenshot Upload -->
+        <div class="form-group">
+          <label class="form-label">
+            <span>Payment Screenshot Proof <span class="req">*</span></span>
+          </label>
+          <div class="upload-area" id="upload-dropzone">
+            <svg class="upload-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <div class="upload-text" id="upload-label">Upload Paytm Receipt Screenshot</div>
+            <div class="upload-sub">Supports JPG, PNG, WEBP (Max 5MB)</div>
+            <img id="screenshot-preview" class="upload-preview" alt="Preview">
+            <input type="file" id="screenshot-file" class="file-input" accept="image/*" required>
+          </div>
+        </div>
+
+        <!-- 6. Submit Button -->
+        <button type="submit" id="submit-btn" class="submit-btn">
+          <span>Proceed To Verification</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Status / Success Modal -->
+  <div id="status-modal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-icon-wrap">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      </div>
+      <h3 class="modal-title">Receipt Uploaded!</h3>
+      <div class="status-tag">Status: Pending Verification</div>
+      <p class="modal-desc">Your Paytm payment of <strong><span id="modal-amt"></span></strong> has been sent for manual confirmation. Your wallet balance will be updated automatically upon approval.</p>
+      <button class="modal-btn" onclick="window.location.href='/#/wallet'">Go to Wallet</button>
+    </div>
+  </div>
+
+  <script>
+    const GATEWAY_ID = 'paytmqr';
+    const params = new URLSearchParams(window.location.search);
+    const uid = params.get('uid') || '1677637';
+    const amount = parseFloat(params.get('amount')) || 500;
+    const token = params.get('token') || '';
+    const session = params.get('session') || '';
+
+    // Initialize UI
+    document.getElementById('amount-display').textContent = '₹' + amount.toFixed(2);
+    document.getElementById('modal-amt').textContent = '₹' + amount.toFixed(2);
+
+    // Timer
+    let totalSec = 599;
+    const countdownEl = document.getElementById('countdown');
+    setInterval(() => {
+      if (totalSec <= 0) return;
+      totalSec--;
+      const m = Math.floor(totalSec / 60).toString().padStart(2, '0');
+      const s = (totalSec % 60).toString().padStart(2, '0');
+      countdownEl.textContent = `${m}:${s}`;
+    }, 1000);
+
+    // Check Gateway Status
+    async function checkGateway() {
+      try {
+        const res = await fetch(`/api/gateways/status?gateway=${GATEWAY_ID}`);
+        const data = await res.json();
+        if (data && data.data) {
+          const gw = data.data;
+          if (!gw.enabled) {
+            document.getElementById('payment-card').style.display = 'none';
+            document.getElementById('server-down-card').style.display = 'block';
+            return;
+          }
+          if (gw.qrImage) {
+            document.getElementById('qr-image').src = gw.qrImage + '?t=' + Date.now();
+          }
+        }
+      } catch (e) {
+        console.warn('Gateway check error', e);
+      }
+    }
+    checkGateway();
+
+    // Strict UTR validation
+    const utrInput = document.getElementById('utr-input');
+    const utrCounter = document.getElementById('utr-counter');
+    utrInput.addEventListener('input', function() {
+      this.value = this.value.replace(/[^0-9]/g, '');
+      utrCounter.textContent = `${this.value.length}/12`;
+      if (this.value.length >= 10 && this.value.length <= 12) {
+        utrCounter.style.color = '#10b981';
+      } else {
+        utrCounter.style.color = '#00baf2';
+      }
+    });
+
+    // File Upload handling
+    const dropzone = document.getElementById('upload-dropzone');
+    const fileInput = document.getElementById('screenshot-file');
+    const preview = document.getElementById('screenshot-preview');
+    const uploadLabel = document.getElementById('upload-label');
+    let screenshotBase64 = '';
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) handleFile(fileInput.files[0]);
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) {
+        alert('Please upload an image file (JPG, PNG, WEBP)');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        screenshotBase64 = e.target.result;
+        preview.src = screenshotBase64;
+        preview.style.display = 'block';
+        uploadLabel.textContent = file.name;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Submit handler
+    document.getElementById('payment-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const utr = utrInput.value.trim();
+      const name = document.getElementById('name-input').value.trim();
+
+      if (utr.length < 10 || utr.length > 12) {
+        alert('UTR Number must be strictly between 10 and 12 digits');
+        utrInput.focus();
+        return;
+      }
+      if (!name) {
+        alert('Please enter your full name');
+        return;
+      }
+      if (!screenshotBase64) {
+        alert('Please upload a screenshot of your payment');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = 'Submitting Request...';
+
+      try {
+        const res = await fetch('/api/recharge/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            gateway: 'Paytm x QR',
+            userId: uid,
+            amount: amount,
+            utrNumber: utr,
+            fullName: name,
+            screenshot: screenshotBase64,
+            token: token,
+            session: session
+          })
+        });
+        const resData = await res.json();
+        if (resData.code === 0 || resData.result) {
+          document.getElementById('status-modal').style.display = 'flex';
+        } else {
+          alert(resData.msg || 'Failed to submit payment request');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = 'Proceed To Verification';
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Connection error. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Proceed To Verification';
+      }
+    });
+  </script>
+</body>
+</html>
