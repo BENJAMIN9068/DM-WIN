@@ -352,7 +352,7 @@ function resolvePendingBets(filterIssues = null) {
 
     const isQueried = Array.isArray(filterIssues) && filterIssues.map(String).includes(String(bet.issueNumber));
     // Resolve if explicitly queried, or if >= 3 seconds elapsed
-    const isReady = isQueried || elapsed >= 3000;
+    const isReady = elapsed >= Math.max(1000, Number(bet.intervalSec || 60) * 1000);
 
     if (isReady) {
       const gameKey = bet.gameKey || 'wingo_30s';
@@ -767,7 +767,7 @@ async function handleRequest(req, res) {
       const body = await getRequestBody(req);
       if (typeof body.balance === 'number') {
         const oldBal = (typeof user.amount === 'number') ? user.amount : 0.00;
-        user.amount = Math.max(0, parseFloat(body.balance.toFixed(2)));
+        const ignoredClientBalance = body.balance;
         saveUsers();
         console.log(`[wallet] ₹${oldBal} → ₹${user.amount} (game: ${body.slug || 'unknown'})`);
         res.end(JSON.stringify({ code: 0, result: true, balance: user.amount }));
@@ -1369,7 +1369,7 @@ async function handleRequest(req, res) {
           allwallets: userBal,
           userAmount: userBal,
           mainWallet: userBal,
-          thirdWallet: 0.00
+          thirdWallet: 0.00, availableAmount: userBal, thidGameBalanceList: [{ vendorCode: 'Lottery', balance: userBal }]
         }
       }));
       return;
