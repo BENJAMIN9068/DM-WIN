@@ -617,6 +617,57 @@ setInterval(() => {
   resolvePendingBets().catch(err => console.error('[RESOLVER]', err.message));
 }, 1000);
 
+// The minified frontend bundle reads record items with ORIGINAL-SITE semantics:
+//   state: 1 = win ("success"), 2 = pending ("unsettled"), anything else = loss ("fail")
+// while our internal storage uses 0 = pending, 1 = win, 2 = loss (see
+// resolvePendingBets). It also reads original-API field names (winLoseAmount,
+// betTime, premium, ...). This helper returns a copy with every alias the UI
+// components look for, so a pending bet no longer renders as "Loss" and the
+// win/loss renders the moment its own round settles.
+function wingoSelectToContent(selectType) {
+  let st = String(selectType ?? "");
+  const n = parseInt(st, 10);
+  if (n >= 15 && n <= 24) st = String(n - 15); // legacy 15..24 -> numbers 0..9
+  switch (st) {
+    case "10": return "Color_Red";
+    case "11": return "Color_Green";
+    case "12": return "Color_Violet";
+    case "13": return "BigSmall_Big";
+    case "14": return "BigSmall_Small";
+    default: return `WinGo_${st}`;
+  }
+}
+
+function mapBetForUi(bet) {
+  const settled = bet.state !== 0;
+  const winLose = bet.state === 1 ? (bet.winAmount || 0) : -Number(bet.amount || 0);
+  return {
+    ...bet,
+    // list UI (MayrecordList): 1 = win, 2 = pending ("unsettled"), else loss ("fail")
+    state: bet.state === 0 ? 2 : bet.state,
+    // detail card UI (MyGameRecord): 1 = pending, 2 = loss, 3 = win
+    status: bet.state === 0 ? 1 : (bet.state === 1 ? 3 : 2),
+    winLoseAmount: winLose,
+    profit: winLose,
+    betTime: bet.addTime,
+    createTime: bet.addTime,
+    openingTime: bet.addTime,
+    openingResult: settled ? String(bet.number ?? bet.premium ?? "") : "",
+    premium: settled ? String(bet.premium ?? bet.number ?? "") : "",
+    winningNum: bet.state === 1 ? String(bet.number ?? "") : "",
+    winningAmount: bet.winAmount || 0,
+    realBettingAmount: bet.realAmount ?? bet.amount,
+    orderNo: bet.orderNumber,
+    id: bet.orderNumber,
+    betMultiple: bet.betCount ?? 1,
+    betContent: wingoSelectToContent(bet.selectType),
+    bettingContent: wingoSelectToContent(bet.selectType),
+    bettingFormat: 1,
+    issueNoStatus: bet.state === 0 ? 1 : 0,
+    playType: "winGo"
+  };
+}
+
 function normalizeNumber(raw) {
   let cleaned = String(raw || '').trim().replace(/[^\d]/g, '');
   let numberType = "91";
@@ -2578,22 +2629,7 @@ async function handleRequest(req, res) {
         const bet = betStore[i];
         const isQueried = requestedIssues.length > 0 && requestedIssues.includes(String(bet.issueNumber));
         if (isQueried || (requestedIssues.length === 0 && (bet.userNumber === userPhone || !bet.userNumber))) {
-          resolvedResults.push({
-            orderNumber: bet.orderNumber,
-            issueNumber: bet.issueNumber,
-            typeName: bet.typeName || "Win Go",
-            amount: bet.amount,
-            realAmount: bet.realAmount,
-            winAmount: bet.winAmount || 0,
-            profitAmount: bet.profitAmount || 0,
-            state: bet.state,
-            selectType: bet.selectType,
-            number: bet.number,
-            colour: bet.colour,
-            bs: bet.bs,
-            addTime: bet.addTime,
-            gameType: bet.gameType || 1
-          });
+          resolvedResults.push(mapBetForUi(bet));
           if (resolvedResults.length >= 10) break;
         }
       }
@@ -2616,7 +2652,7 @@ async function handleRequest(req, res) {
         return;
       }
       const userPhone = user.number || null;
-      const list = betStore.filter(b => b.userNumber === userPhone || String(b.userId) === String(user.userId)).slice(-20).reverse();
+      const list = betStore.filter(b => b.userNumber === userPhone || String(b.userId) === String(user.userId)).slice(-20).reverse().map(mapBetForUi);
       res.end(JSON.stringify({
         code: 0,
         result: true,
