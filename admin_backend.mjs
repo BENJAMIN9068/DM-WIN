@@ -1,9 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const JWT_SECRET = () => process.env.JWT_SECRET || '';
 
 const USERS_FILE = path.join(__dirname, 'local_users.json');
 const RECHARGES_FILE = path.join(__dirname, 'local_recharges.json');
@@ -13,8 +17,30 @@ const HACK_BOTS_FILE = path.join(__dirname, 'local_hack_bots.json');
 const AUDIT_FILE = path.join(__dirname, 'local_admin_audit.json');
 const GATEWAYS_FILE = path.join(__dirname, 'local_gateways.json');
 
-// In-memory admin sessions
-const activeAdminTokens = new Set(['admin_token_default_active_session']);
+const ADMIN_TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+// In-memory admin sessions: token -> expiry timestamp. There is intentionally NO
+// default/backdoor token here — a token must be minted by a successful login.
+const activeAdminTokens = new Map();
+
+// The live wallet store is injected by the server (serve.mjs) so the admin console
+// reads and writes the SAME MongoDB-backed wallet the game engine uses. If it is
+// not injected (e.g. a standalone test), handlers fall back to the legacy files.
+let walletStore = null;
+export function setWalletStore(store) {
+  walletStore = store && typeof store === 'object' ? store : null;
+}
+
+// Temporary diagnostic: expose whether the live wallet store is actually
+// injected into this admin_backend module instance (used to debug the
+// "admin approve does not credit" issue on the live Azure host).
+export function adminDiag() {
+  return {
+    walletStoreInjected: !!walletStore,
+    hasCreditFn: !!(walletStore && typeof walletStore.creditUserByUserId === 'function'),
+    hasGetUsersMap: !!(walletStore && typeof walletStore.getUsersMap === 'function')
+  };
+}
 
 function readJson(file, defaultVal) {
   try {
@@ -55,28 +81,62 @@ export function logAudit(action, details, admin = 'admin') {
 export function verifyAdminAuth(req) {
   const authHeader = req.headers['authorization'] || req.headers['x-admin-token'] || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-  // Allow default token or any active token generated via login
-  return token && (token === 'admin_token_default_active_session' || activeAdminTokens.has(token));
+  if (!token) return false;
+
+  // Only sessions issued by a successful login are valid. The token is an opaque
+  // JWT string registered in this map, so logout (which deletes the entry) really
+  // ends the session and an attacker cannot mint a token outside the login flow.
+  const expiresAt = activeAdminTokens.get(token);
+  if (!expiresAt) return false;
+  if (expiresAt > Date.now()) return true;
+  activeAdminTokens.delete(token); // expired
+  return false;
 }
 
 // ── 1. Admin Auth Handler ───────────────────────────────────────────────────
-export async function handleAdminAuth(endpoint, method, body) {
+export async function handleAdminAuth(endpoint, method, body, req) {
   if (endpoint === '/api/admin/login' && method === 'POST') {
-    const { username, password } = body;
-    if (username === 'admin' && (password === 'admin@FORNTMAN2026!' || password === 'admin' || password === 'admin123')) {
-      const token = `admin_token_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      activeAdminTokens.add(token);
-      logAudit('ADMIN_LOGIN', `Admin logged in successfully from IP`);
-      return {
-        code: 0,
-        result: true,
-        data: {
-          token,
-          user: { username: 'admin', role: 'Super Administrator', lastLogin: new Date().toISOString() }
-        }
-      };
+    const { username, password } = body || {};
+
+    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+    const expectedHash = process.env.ADMIN_PASSWORD_HASH || '';
+    const expectedPlain = process.env.ADMIN_PASSWORD || 'admin@FORNTMAN2026!';
+
+    if (username !== adminUsername || typeof password !== 'string') {
+      return { code: 401, result: false, msg: 'Invalid administrator credentials' };
     }
-    return { code: 401, result: false, msg: 'Invalid administrator credentials' };
+
+    let ok = false;
+    if (expectedHash) {
+      try { ok = await bcrypt.compare(password, expectedHash); } catch (e) { ok = false; }
+    } else {
+      ok = (password === expectedPlain);
+      if (!process.env.ADMIN_PASSWORD) {
+        console.warn('[ADMIN] Using the built-in default admin password. Set ADMIN_PASSWORD (or ADMIN_PASSWORD_HASH) to override it.');
+      }
+    }
+
+    if (!ok) {
+      return { code: 401, result: false, msg: 'Invalid administrator credentials' };
+    }
+
+    const secret = JWT_SECRET();
+    if (!secret) {
+      return { code: 503, result: false, msg: 'JWT_SECRET is not configured; admin login is unavailable' };
+    }
+
+    // One short-lived, verifiable token (both in-memory and stateless-JWT).
+    const token = jwt.sign({ sub: 'admin', role: 'admin' }, secret, { expiresIn: '12h' });
+    activeAdminTokens.set(token, Date.now() + ADMIN_TOKEN_TTL_MS);
+    logAudit('ADMIN_LOGIN', 'Admin logged in successfully');
+    return {
+      code: 0,
+      result: true,
+      data: {
+        token,
+        user: { username: 'admin', role: 'Super Administrator', lastLogin: new Date().toISOString() }
+      }
+    };
   }
 
   if (endpoint === '/api/admin/me') {
@@ -88,6 +148,9 @@ export async function handleAdminAuth(endpoint, method, body) {
   }
 
   if (endpoint === '/api/admin/logout' && method === 'POST') {
+    const authHeader = (req && (req.headers['authorization'] || req.headers['x-admin-token'])) || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    if (token) activeAdminTokens.delete(token);
     return { code: 0, result: true, msg: 'Logged out successfully' };
   }
 
@@ -96,7 +159,10 @@ export async function handleAdminAuth(endpoint, method, body) {
 
 // ── 2. Dashboard KPIs & Interactive Charts ────────────────────────────────────
 export async function handleAdminDashboard(urlParams) {
-  const users = readJson(USERS_FILE, {});
+  // The live wallet store (injected by the server) is the authoritative user list.
+  const users = (walletStore && typeof walletStore.getUsersMap === 'function')
+    ? walletStore.getUsersMap()
+    : readJson(USERS_FILE, {});
   const recharges = readJson(RECHARGES_FILE, []);
   const withdrawals = readJson(WITHDRAWALS_FILE, []);
 
@@ -270,7 +336,8 @@ export async function handleAdminGames(endpoint, method, body) {
       // dynamic auto balance between 48% and 52%
       game.winRate = +(49.5 + Math.random() * 2).toFixed(1);
     } else {
-      game.winRate = Math.min(100, Math.max(0, parseFloat(winRate) || 50.0));
+      const parsed = parseFloat(winRate);
+      game.winRate = Number.isFinite(parsed) ? Math.min(100, Math.max(0, parsed)) : 50.0;
       game.winRateMode = 'manual';
     }
 
@@ -509,9 +576,16 @@ export function getUnifiedLiveResultForIssue(gameCodeOrKeyOrTypeId, issueNumber)
 
   const botsData = readJson(HACK_BOTS_FILE, { unified: {}, userSpecific: [] });
 
-  // 1. Check if admin set a manual override specifically for this issue
+  // 1. Check if admin set a manual override specifically for this issue.
   const stored = botsData.unified?.[cfg.key];
-  if (stored && stored.overrideIssue === issueNumber && (stored.source === 'Admin Manual Override' || stored.source?.includes('Override'))) {
+  if (stored && stored.declaredByIssue && stored.declaredByIssue[String(issueNumber)] !== undefined) {
+    return {
+      result: stored.declaredByIssue[String(issueNumber)],
+      source: stored.source || 'Admin Manual Override',
+      details: stored.details || {}
+    };
+  }
+  if (stored && stored.overrideIssue === issueNumber && stored.declaredResult !== undefined && stored.declaredResult !== null) {
     return {
       result: stored.declaredResult,
       source: stored.source || 'Admin Manual Override',
@@ -531,6 +605,7 @@ export function getUnifiedLiveResultForIssue(gameCodeOrKeyOrTypeId, issueNumber)
 export async function handleAdminHackBots(endpoint, method, body, aviatorEngine) {
   let botsData = readJson(HACK_BOTS_FILE, { unified: {}, userSpecific: [] });
   if (!botsData.unified) botsData.unified = {};
+  if (!Array.isArray(botsData.userSpecific)) botsData.userSpecific = [];
 
   // Get Unified status across ALL categories & intervals
   if (endpoint === '/api/admin/hack-bots/unified' && method === 'GET') {
@@ -612,7 +687,8 @@ export async function handleAdminHackBots(endpoint, method, body, aviatorEngine)
         finalSource = 'Admin Manual Override';
         finalDetails = stored.details || autoOut.details;
       } else {
-        // Save server auto-declared result
+        // Save server auto-declared result, but PRESERVE any per-issue admin
+        // declarations so a previously declared result is never overwritten.
         botsData.unified[cfg.key] = {
           name: cfg.name,
           gameCode: cfg.gameCode,
@@ -624,7 +700,8 @@ export async function handleAdminHackBots(endpoint, method, body, aviatorEngine)
           source: finalSource,
           details: finalDetails,
           issueNumber,
-          overrideIssue: null
+          overrideIssue: null,
+          declaredByIssue: stored.declaredByIssue || {}
         };
       }
 
@@ -718,6 +795,14 @@ export async function handleAdminHackBots(endpoint, method, body, aviatorEngine)
     }
 
     if (!botsData.unified[cfg.key]) botsData.unified[cfg.key] = {};
+    const byIssue = botsData.unified[cfg.key].declaredByIssue || {};
+    byIssue[issueNumber] = String(result);
+    // Prune to the last 50 declared issues to keep the file bounded.
+    const keys = Object.keys(byIssue);
+    if (keys.length > 50) {
+      for (const k of keys.slice(0, keys.length - 50)) delete byIssue[k];
+    }
+    botsData.unified[cfg.key].declaredByIssue = byIssue;
     botsData.unified[cfg.key].declaredResult = String(result);
     botsData.unified[cfg.key].overrideIssue = issueNumber;
     botsData.unified[cfg.key].source = 'Admin Manual Override';
@@ -824,7 +909,9 @@ export async function handleAdminHackBots(endpoint, method, body, aviatorEngine)
 // ── 5. Recharge Section ──────────────────────────────────────────────────────
 export async function handleAdminRecharges(endpoint, method, body) {
   let recharges = readJson(RECHARGES_FILE, []);
-  let users = readJson(USERS_FILE, {});
+  let users = (walletStore && typeof walletStore.getUsersMap === 'function')
+    ? walletStore.getUsersMap()
+    : readJson(USERS_FILE, {});
 
   if (endpoint === '/api/admin/recharges' && method === 'GET') {
     const todayStr = new Date().toISOString().slice(0, 10);
@@ -861,28 +948,51 @@ export async function handleAdminRecharges(endpoint, method, body) {
     }
 
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const amount = Number(rec.amount) || 0;
 
     if (action === 'Accept') {
-      rec.status = 'Accepted';
-      rec.processedAt = now;
-
-      // Credit immediately to user's wallet
-      const userKey = Object.keys(users).find(k => users[k].userId === rec.userId || users[k].number === rec.phoneNumber);
-      if (userKey && users[userKey]) {
+      // Credit the LIVE wallet (the same store the game engine serves), and only
+      // then flip the status. This replaces the old local_users.json write that no
+      // code ever read — which is why approvals silently credited nobody.
+      if (walletStore && typeof walletStore.creditUserByUserId === 'function') {
+        const credited = await walletStore.creditUserByUserId(rec.userId, amount, rec.id);
+        if (!credited) {
+          return { code: 409, result: false, msg: 'Could not credit the user wallet (user not found).' };
+        }
+        console.log(`[Recharge Accepted] Credited ₹${amount} to userId ${rec.userId} (now ₹${credited.amount})`);
+      } else {
+        // Legacy fallback (tests / no server store). Do NOT claim credit if the
+        // user cannot be found.
+        const userKey = Object.keys(users).find(k => users[k].userId === rec.userId || users[k].number === rec.phoneNumber);
+        if (!userKey || !users[userKey]) {
+          return { code: 409, result: false, msg: 'User wallet not found; nothing was credited.' };
+        }
         const oldBal = users[userKey].amount || 0;
-        users[userKey].amount = +(oldBal + Number(rec.amount)).toFixed(2);
+        users[userKey].amount = +(oldBal + amount).toFixed(2);
         writeJson(USERS_FILE, users);
-        console.log(`[Recharge Accepted] Credited ₹${rec.amount} to user ${users[userKey].username} (₹${oldBal} -> ₹${users[userKey].amount})`);
       }
 
-      writeJson(RECHARGES_FILE, recharges);
+      rec.status = 'Accepted';
+      rec.processedAt = now;
+      rec.creditedAt = now;
+      if (!writeJson(RECHARGES_FILE, recharges)) {
+        console.error('[Recharge Accept] Failed to persist recharge status:', rec.id);
+      }
+      if (walletStore && typeof walletStore.persistRecharge === 'function') {
+        walletStore.persistRecharge(rec).catch(() => {});
+      }
       logAudit('ACCEPT_RECHARGE', { rechargeId: rec.id, userId: rec.userId, amount: rec.amount, utr: rec.utrNumber });
 
       return { code: 0, result: true, msg: `Recharge #${rec.id} of ₹${rec.amount} accepted and credited to user's wallet!`, data: rec };
     } else if (action === 'Reject') {
       rec.status = 'Rejected';
       rec.processedAt = now;
-      writeJson(RECHARGES_FILE, recharges);
+      if (!writeJson(RECHARGES_FILE, recharges)) {
+        console.error('[Recharge Reject] Failed to persist recharge status:', rec.id);
+      }
+      if (walletStore && typeof walletStore.persistRecharge === 'function') {
+        walletStore.persistRecharge(rec).catch(() => {});
+      }
       logAudit('REJECT_RECHARGE', { rechargeId: rec.id, userId: rec.userId, amount: rec.amount, reason: body.reason || 'Admin rejected' });
 
       return { code: 0, result: true, msg: `Recharge #${rec.id} rejected. No funds added.`, data: rec };
@@ -934,7 +1044,11 @@ export async function handleAdminWithdrawals(endpoint, method, body, urlParams) 
 
 // ── 7. User List Section ─────────────────────────────────────────────────────
 export async function handleAdminUsers(endpoint, method, body, urlParams) {
-  let users = readJson(USERS_FILE, {});
+  // Use the live store when available so the admin console reflects real users.
+  const getUsersMap = () => (walletStore && typeof walletStore.getUsersMap === 'function')
+    ? walletStore.getUsersMap()
+    : readJson(USERS_FILE, {});
+  let users = getUsersMap();
 
   if (endpoint === '/api/admin/users' && method === 'GET') {
     const search = (urlParams?.get('search') || '').toLowerCase().trim();
@@ -983,6 +1097,20 @@ export async function handleAdminUsers(endpoint, method, body, urlParams) {
   if (endpoint === '/api/admin/users/ban' && method === 'POST') {
     const { userId, isBanned } = body;
     const numId = parseInt(userId);
+
+    if (walletStore && typeof walletStore.setUserBanned === 'function') {
+      const updated = await walletStore.setUserBanned(numId, !!isBanned);
+      if (!updated) return { code: 404, result: false, msg: 'User not found' };
+      const action = isBanned ? 'BAN_USER' : 'UNBAN_USER';
+      logAudit(action, { userId: numId, username: updated.username, isBanned: !!isBanned });
+      return {
+        code: 0,
+        result: true,
+        msg: `User ${updated.username} has been ${isBanned ? 'banned (all sessions revoked)' : 'unbanned successfully'}.`,
+        data: updated
+      };
+    }
+
     const userKey = Object.keys(users).find(k => users[k].userId === numId);
     if (!userKey || !users[userKey]) return { code: 404, result: false, msg: 'User not found' };
 
@@ -994,7 +1122,6 @@ export async function handleAdminUsers(endpoint, method, body, urlParams) {
 
     const action = isBanned ? 'BAN_USER' : 'UNBAN_USER';
     logAudit(action, { userId: numId, username: users[userKey].username, isBanned });
-
     return {
       code: 0,
       result: true,
@@ -1011,6 +1138,26 @@ export async function handleAdminUsers(endpoint, method, body, urlParams) {
 
     if (isNaN(parsedBalance) || parsedBalance < 0) {
       return { code: 400, result: false, msg: 'Invalid wallet balance amount' };
+    }
+
+    if (walletStore && typeof walletStore.setUserBalance === 'function') {
+      const updated = await walletStore.setUserBalance(numId, +parsedBalance.toFixed(2));
+      if (!updated) return { code: 404, result: false, msg: 'User not found' };
+      logAudit('EDIT_BALANCE', {
+        adminId: 'admin',
+        userId: numId,
+        username: updated.username,
+        previousBalance: updated._previousBalance,
+        newBalance: updated.amount,
+        reason: reason || 'Manual Admin Balance Adjustment',
+        timestamp: new Date().toISOString()
+      });
+      return {
+        code: 0,
+        result: true,
+        msg: `Balance for ${updated.username} updated from ₹${updated._previousBalance} to ₹${updated.amount}`,
+        data: { userId: numId, previousBalance: updated._previousBalance, newBalance: updated.amount }
+      };
     }
 
     const userKey = Object.keys(users).find(k => users[k].userId === numId);

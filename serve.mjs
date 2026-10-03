@@ -38,6 +38,7 @@ async function loadAdminBackend() {
   handleAdminGateways         = ab.handleAdminGateways          || noop;
   verifyAdminAuth             = ab.verifyAdminAuth              || (() => null);
   setWalletStore              = ab.setWalletStore               || (() => {});
+  adminDiag                   = ab.adminDiag                    || null;
   logAudit                    = ab.logAudit                     || (() => {});
   getUnifiedLiveResultForIssue = ab.getUnifiedLiveResultForIssue || (() => null);
   getGameConfigByTypeId       = ab.getGameConfigByTypeId        || (() => null);
@@ -46,7 +47,7 @@ async function loadAdminBackend() {
 // Named bindings used throughout this module. Populated by loadAdminBackend() below.
 let handleAdminAuth, handleAdminDashboard, handleAdminGames, handleAdminHackBots,
     handleAdminRecharges, handleAdminWithdrawals, handleAdminUsers, handleAdminAudit,
-    handleAdminGateways, verifyAdminAuth, setWalletStore, logAudit,
+    handleAdminGateways, verifyAdminAuth, setWalletStore, logAudit, adminDiag,
     getUnifiedLiveResultForIssue, getGameConfigByTypeId;
 // Eagerly load at startup (ESM top-level await). Now that the let bindings above
 // are declared, this safely populates them. A bad admin_backend can never crash
@@ -878,6 +879,50 @@ async function handleRequest(req, res) {
     if (!verifyAdminAuth(req)) {
       res.writeHead(401);
       res.end(JSON.stringify({ code: 401, result: false, msg: 'Unauthorized: Admin authentication token required' }));
+      return;
+    }
+
+    // ── TEMPORARY diagnostic (admin only) — inspect per-instance state to debug
+    // "manual approve does not credit the wallet" on the live host. Removed
+    // once the root cause is confirmed. ─────────────────────────────────────
+    if (endpoint === '/api/admin/diag') {
+      const out = {
+        pid: process.pid,
+        uptimeSec: Math.round(process.uptime()),
+        node: process.version,
+        memUserCount: Object.keys(users).length,
+        memUsers: Object.values(users).slice(0, 50).map(u => ({
+          userId: u?.userId, number: u?.number, amount: u?.amount
+        })),
+        adminBackend: typeof adminDiag === 'function' ? adminDiag() : { walletStoreInjected: false, note: 'adminDiag binding missing' },
+        localUsersFile: null,
+        localRechargesCount: null,
+        mongo: null
+      };
+      try {
+        const p = path.join(__dirname, 'local_users.json');
+        if (fs.existsSync(p)) {
+          const lu = JSON.parse(fs.readFileSync(p, 'utf8'));
+          out.localUsersFile = Object.entries(lu).map(([k, u]) => ({ key: k, userId: u?.userId, amount: u?.amount }));
+        }
+        const rp = path.join(__dirname, 'local_recharges.json');
+        if (fs.existsSync(rp)) out.localRechargesCount = JSON.parse(fs.readFileSync(rp, 'utf8')).length;
+      } catch (e) { out.fileErr = e.message; }
+      try {
+        if (isMongoConnected && MongoUser && mongoose.connection.readyState === 1) {
+          const docs = await MongoUser.find().lean();
+          out.mongo = {
+            ready: true,
+            count: docs.length,
+            users: docs.map(d => ({ userId: d.userId, number: d.number, amount: d.amount }))
+          };
+          if (MongoRecharge) out.mongo.rechargeCount = await MongoRecharge.countDocuments();
+        } else {
+          out.mongo = { ready: false, state: mongoose.connection.readyState };
+        }
+      } catch (e) { out.mongo = { error: e.message }; }
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify(out));
       return;
     }
 
