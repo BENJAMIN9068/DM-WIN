@@ -5,41 +5,56 @@
 
   const WALLET_KEY = 'dmfirst_game_wallet';
 
-  function getWalletBalance() {
+  function readToken() {
     try {
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', '/api/game-wallet', false);
-      xhr.send();
-      const res = JSON.parse(xhr.responseText);
-      if (res && typeof res.balance === 'number') {
-        window.__gameBalance = res.balance;
-        return res.balance;
+      return localStorage.getItem('token') || localStorage.getItem('userToken') ||
+             localStorage.getItem('accessToken') || '';
+    } catch (e) { return ''; }
+  }
+
+  function walletUrl() {
+    const t = readToken();
+    return t ? '/api/game-wallet?token=' + encodeURIComponent(t) : '/api/game-wallet';
+  }
+
+  function getWalletBalance() {
+    // Non-blocking read: the wallet bridge loads the authoritative balance
+    // asynchronously (a synchronous XHR here used to stall the boot and needed a
+    // session token it never sent, so it always fell through to 1250 / 0).
+    try {
+      if (typeof window.__gameBalance === 'number' && isFinite(window.__gameBalance)) {
+        return window.__gameBalance;
       }
-    } catch(e) {}
+    } catch (e) {}
     try {
       const raw = localStorage.getItem(WALLET_KEY);
       if (raw) {
         const data = JSON.parse(raw);
         if (data && typeof data.balance === 'number' && data.balance >= 0) {
+          window.__gameBalance = data.balance;
           return data.balance;
         }
       }
-    } catch(e) {}
-    return window.__gameBalance || 1250;
+    } catch (e) {}
+    return 0;
   }
 
   function setWalletBalance(newBal) {
     try {
-      newBal = Math.max(0, parseFloat(newBal.toFixed(2)));
+      newBal = Math.max(0, parseFloat(Number(newBal).toFixed(2)));
+      if (!isFinite(newBal)) return;
       window.__gameBalance = newBal;
       let existing = {};
       try { existing = JSON.parse(localStorage.getItem(WALLET_KEY) || '{}'); } catch(e) {}
       existing.balance = newBal;
       existing.time = Date.now();
       localStorage.setItem(WALLET_KEY, JSON.stringify(existing));
-      
+
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/game-wallet', true);
+      xhr.open('POST', walletUrl(), true);
+      xhr.timeout = 8000;
+      const token = readToken();
+      if (token) { try { xhr.setRequestHeader('Authorization', 'Bearer ' + token); } catch (e) {} }
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.send(JSON.stringify({ balance: newBal, slug: 'aviator' }));
     } catch(e) {}
@@ -191,13 +206,20 @@
       const isLogin = (request._userName !== undefined) || (request.constructor && request.constructor.name === 'LoginRequest');
       if (isLogin) {
         const uParams = new URLSearchParams(window.location.search);
-        const userId = uParams.get('user') || '9068839558';
-        console.log('[*] Sending LoginRequest to centralized server for user:', userId);
+        const userId = uParams.get('user') || '';
+        // The server derives the wallet identity from a verifiable session token,
+        // never from the userId query param. Read the same token the main app stores.
+        let token = null;
+        try {
+          token = localStorage.getItem('token') || localStorage.getItem('userToken') || null;
+        } catch (e) { token = null; }
+        console.log('[*] Sending LoginRequest to centralized server (authenticated)');
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           this.ws.send(JSON.stringify({
             type: "login",
-            userName: request._userName || userId,
-            userId: userId
+            userName: request._userName || userId || null,
+            userId: userId || null,
+            token: token
           }));
         }
         return;

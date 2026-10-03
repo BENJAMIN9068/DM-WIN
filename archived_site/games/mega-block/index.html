@@ -1,267 +1,125 @@
 <!DOCTYPE html>
 <html lang="en-us">
-  <head>
+  <head><script src="/games/_shared/game-hostfix.js"></script>
 <script id="__wallet_bridge__">
-// ── Wallet Bridge: reads balance from parent app and syncs back ──────────
 (function() {
   var WALLET_KEY = 'dmfirst_game_wallet';
   var SLUG = 'mega-block';
-
   window.__gameBalance = 0;
   window.__gameBalanceDeducted = 0;
+
+  function readToken() {
+    try {
+      return localStorage.getItem('token') || localStorage.getItem('userToken') ||
+             localStorage.getItem('accessToken') || '';
+    } catch (e) { return ''; }
+  }
 
   function readInitialBalance() {
     try {
       var raw = localStorage.getItem(WALLET_KEY);
       if (raw) {
-        var data = JSON.parse(raw);
-        if (data && typeof data.balance === 'number' && data.balance >= 0) {
-          window.__gameBalance = data.balance;
-          return data.balance;
-        }
+        var d = JSON.parse(raw);
+        if (d && typeof d.balance === 'number' && d.balance >= 0) return d.balance;
       }
     } catch (e) {}
-    return 350;
+    return 0;
   }
 
   function saveBalance(newBal) {
     try {
       newBal = Math.max(0, parseFloat(Number(newBal).toFixed(2)));
+      if (!isFinite(newBal)) return;
       window.__gameBalance = newBal;
       var existing = {};
-      try { existing = JSON.parse(localStorage.getItem(WALLET_KEY) || '{}'); } catch(e) {}
+      try { existing = JSON.parse(localStorage.getItem(WALLET_KEY) || '{}'); } catch (e) {}
       existing.balance = newBal;
       existing.time = Date.now();
       localStorage.setItem(WALLET_KEY, JSON.stringify(existing));
+      try {
+        window.dispatchEvent(new CustomEvent('dmfirst:balance', { detail: { balance: newBal, slug: SLUG } }));
+      } catch (e) {}
     } catch (e) {}
   }
 
-  function syncToServer(balance, slug) {
-    try {
-      var xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/game-wallet', true);
-      xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.send(JSON.stringify({ balance: balance, slug: slug }));
-    } catch(e) {}
+  // Endpoint that always resolves, whatever origin/host the page is served from.
+  function walletUrl() {
+    var u = '/api/game-wallet';
+    var t = readToken();
+    return t ? u + '?token=' + encodeURIComponent(t) : u;
   }
 
-  function loadFromServer(slug) {
+  function xhr(method, url, body, cb) {
     try {
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', '/api/game-wallet', false); // sync
-      xhr.send();
-      var data = JSON.parse(xhr.responseText);
+      var x = new XMLHttpRequest();
+      x.open(method, url, true);
+      x.timeout = 8000;
+      var t = readToken();
+      if (t) { try { x.setRequestHeader('Authorization', 'Bearer ' + t); } catch (e) {} }
+      if (body) x.setRequestHeader('Content-Type', 'application/json');
+      x.onreadystatechange = function() {
+        if (x.readyState !== 4) return;
+        var data = null;
+        try { data = JSON.parse(x.responseText); } catch (e) {}
+        cb(data, x.status);
+      };
+      x.onerror = function() { cb(null, 0); };
+      x.ontimeout = function() { cb(null, 0); };
+      x.send(body ? JSON.stringify(body) : undefined);
+    } catch (e) { cb(null, 0); }
+  }
+
+  // Async on purpose: a synchronous wallet fetch here blocked the main thread and
+  // left the game on its loading screen whenever /api/game-wallet was slow.
+  function loadFromServer() {
+    window.__gameBalance = readInitialBalance();
+    xhr('GET', walletUrl(), null, function(data) {
       if (data && typeof data.balance === 'number') {
         window.__gameBalance = data.balance;
         saveBalance(data.balance);
-        return data.balance;
       }
-    } catch(e) {}
-    return readInitialBalance();
+    });
   }
-  loadFromServer(SLUG);
 
-  // Pre-seed sessionStorage with real wallet balance in INR
-  try {
-    var bal = (window.__gameBalance !== undefined && window.__gameBalance !== null) ? window.__gameBalance : 350;
-    window.sessionStorage.setItem("peperoad.lockedGameCurrency", JSON.stringify({
-      currency: "INR",
-      balance: { balance: bal, currency: "INR" }
-    }));
-  } catch(e) {}
+  function syncToServer(balance) {
+    xhr('POST', walletUrl(), { balance: balance, slug: SLUG }, function() {});
+  }
 
-  // ── WebSocket Interceptor for Inout Games Game Engine ──
-  (function() {
-    var OrigWebSocket = window.WebSocket;
-    if (!OrigWebSocket) return;
+  loadFromServer();
 
-    window.WebSocket = function(url, protocols) {
-      var ws = protocols !== undefined ? new OrigWebSocket(url, protocols) : new OrigWebSocket(url); window.__lastGameWs = ws;
-      
-      var pendingPlayId = null;
-      var pendingPayoutId = null;
-      var pendingStepId = null;
-      var currentBetAmount = 0;
-      var roundResolved = true;
-
-      function showToast(msg) {
-        try {
-          var toast = document.createElement('div');
-          toast.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#e74c3c;color:#fff;padding:12px 28px;border-radius:8px;font-family:sans-serif;font-weight:bold;z-index:999999;box-shadow:0 4px 16px rgba(0,0,0,0.6);font-size:15px;pointer-events:none;transition:opacity 0.3s;';
-          toast.textContent = msg;
-          document.body.appendChild(toast);
-          setTimeout(function() {
-            toast.style.opacity = '0';
-            setTimeout(function() { toast.remove(); }, 300);
-          }, 2500);
-        } catch(e) {}
-      }
-
-      function dispatchBalanceUpdate(bal) {
-        try {
-          var balStr = Number(bal).toFixed(2);
-          var msg = '42["onBalanceChange",{"currency":"INR","balance":"' + balStr + '"}]';
-          ws.dispatchEvent(new MessageEvent('message', { data: msg }));
-        } catch(e) {}
-      }
-
-      var origSend = ws.send;
-      ws.send = function(data) {
-        if (typeof data === 'string' && data.startsWith('42')) {
-          var match = data.match(/^42(\d*)(\[.*\])$/);
-          if (match) {
-            var reqId = match[1];
-            try {
-              var parsed = JSON.parse(match[2]);
-              if (parsed[0] === 'gameService' && parsed[1]) {
-                var act = parsed[1].action;
-                if (act === 'play' || act === 'bet') {
-                  var p = parsed[1].payload || {};
-                  var amt = parseFloat(p.amount !== undefined ? p.amount : p.betAmount);
-                  if (!isNaN(amt) && amt > window.__gameBalance) {
-                    console.warn('[Wallet] Insufficient funds for bet: ₹' + amt + ', balance: ₹' + window.__gameBalance);
-                    showToast('Insufficient funds for this bet!');
-                    return; // Block outgoing bet!
-                  }
-                  pendingPlayId = reqId;
-                  currentBetAmount = !isNaN(amt) ? amt : 0;
-                  roundResolved = false;
-                } else if (act === 'payout' || act === 'withdraw') {
-                  pendingPayoutId = reqId;
-                } else if (act === 'step') {
-                  pendingStepId = reqId;
-                }
-              }
-            } catch(e) {}
-          }
-        }
-        return origSend.call(this, data);
-      };
-
-      ws.addEventListener('message', function(event) {
-        var msg = event.data;
-        if (typeof msg === 'string') {
-          // 1. Rewrite onBalanceChange with current window.__gameBalance
-          if (msg.includes('onBalanceChange')) {
-            var curBal = Number(window.__gameBalance || 0).toFixed(2);
-            var replaced = msg.replace(/"balance":"[^"]+"/, '"balance":"' + curBal + '"');
-            try {
-              Object.defineProperty(event, 'data', { value: replaced, configurable: true });
-            } catch(e) {}
-            return;
-          }
-
-          // 2. Play / Bet Ack: Deduct bet amount
-          if (pendingPlayId && msg.startsWith('43' + pendingPlayId)) {
-            var playId = pendingPlayId;
-            pendingPlayId = null;
-            try {
-              var ackData = JSON.parse(msg.slice(('43' + playId).length))[0];
-              if (ackData && !ackData.error) {
-                window.__gameBalance = Math.max(0, parseFloat((window.__gameBalance - currentBetAmount).toFixed(2)));
-                saveBalance(window.__gameBalance);
-                syncToServer(window.__gameBalance, SLUG);
-                setTimeout(function() {
-                  dispatchBalanceUpdate(window.__gameBalance);
-                }, 50);
-              }
-            } catch(e) {}
-            return;
-          }
-
-          // 3. Payout / Cashout Ack: Add cashout win amount
-          if (pendingPayoutId && msg.startsWith('43' + pendingPayoutId)) {
-            var payoutId = pendingPayoutId;
-            pendingPayoutId = null;
-            try {
-              var ackData = JSON.parse(msg.slice(('43' + payoutId).length))[0];
-              if (ackData && !ackData.error) {
-                var winAmt = parseFloat(ackData.winAmount !== undefined ? ackData.winAmount : ackData.amount);
-                if (!isNaN(winAmt) && winAmt > 0 && !roundResolved) {
-                  roundResolved = true;
-                  window.__gameBalance = parseFloat((window.__gameBalance + winAmt).toFixed(2));
-                  saveBalance(window.__gameBalance);
-                  syncToServer(window.__gameBalance, SLUG);
-                  setTimeout(function() {
-                    dispatchBalanceUpdate(window.__gameBalance);
-                  }, 50);
-                }
-              }
-            } catch(e) {}
-            return;
-          }
-
-          // 4. Step Ack:
-          // In Tower games, intermediate steps return { status: 'in-game', winAmount: ... } -> DO NOT ADD!
-          // If status is 'lose' -> round lost, DO NOT ADD!
-          // ONLY if status is 'win' (reached top of tower and finished) -> add winAmount!
-          if (pendingStepId && msg.startsWith('43' + pendingStepId)) {
-            var stepId = pendingStepId;
-            pendingStepId = null;
-            try {
-              var ackData = JSON.parse(msg.slice(('43' + stepId).length))[0];
-              if (ackData && !ackData.error) {
-                if (ackData.status === 'win' || (ackData.isWin === true && ackData.isFinished === true)) {
-                  var winAmt = parseFloat(ackData.winAmount !== undefined ? ackData.winAmount : ackData.amount);
-                  if (!isNaN(winAmt) && winAmt > 0 && !roundResolved) {
-                    roundResolved = true;
-                    window.__gameBalance = parseFloat((window.__gameBalance + winAmt).toFixed(2));
-                    saveBalance(window.__gameBalance);
-                    syncToServer(window.__gameBalance, SLUG);
-                    setTimeout(function() {
-                      dispatchBalanceUpdate(window.__gameBalance);
-                    }, 50);
-                  }
-                } else if (ackData.status === 'lose') {
-                  roundResolved = true;
-                }
-              }
-            } catch(e) {}
-            return;
-          }
-        }
-      }, true); // capturing phase
-
-      return ws;
-    };
-
-    window.WebSocket.prototype = OrigWebSocket.prototype;
-  })();
-  // ── End WebSocket Interceptor ──
-
-  // Watch for visibility change - save latest balance when leaving
-  document.addEventListener('visibilitychange', function() {
-    if (document.hidden) {
-      saveBalance(window.__gameBalance);
-    }
-  });
-
-  window.addEventListener('beforeunload', function() {
-    saveBalance(window.__gameBalance);
-  });
-
-  window.addEventListener('pagehide', function() {
-    saveBalance(window.__gameBalance);
-  });
-
-  // PostMessage support
-  window.addEventListener('message', function(e) {
+  // Keep the in-game balance element in sync (works for the games that render
+  // their own DOM balance chip instead of reading window.__gameBalance).
+  function syncMenuBalance() {
     try {
-      var msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-      if (!msg) return;
-      if (msg.type === 'GET_BALANCE' || msg.action === 'getBalance') {
-        e.source && e.source.postMessage(JSON.stringify({
-          type: 'BALANCE',
-          balance: window.__gameBalance,
-          amount: window.__gameBalance
-        }), '*');
+      var el = document.querySelector('[data-testid="menu-balance"]');
+      if (el) {
+        var bal = (window.__gameBalance === undefined || window.__gameBalance === null) ? 0 : window.__gameBalance;
+        var formatted = Number(bal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (el.__lastBal !== bal) {
+          el.__lastBal = bal;
+          var sprite = '/' + 'games/' + SLUG + '/static/svg/sprite.4de80bac.svg#INR';
+          el.innerHTML = formatted + '<svg width="18" height="18" viewBox="0 0 18 18" style="fill: rgb(255, 255, 255); margin-left: 4px;"><use xlink:href="' + sprite + '"></use></svg>';
+        }
       }
-      if (msg.type === 'SET_BALANCE' && typeof msg.balance === 'number') {
-        saveBalance(msg.balance);
-      }
-    } catch (e2) {}
-  });
+    } catch (e) {}
+  }
+  setInterval(syncMenuBalance, 300);
+  document.addEventListener('DOMContentLoaded', syncMenuBalance);
 
+  // Re-read the balance whenever the tab regains focus, and push the latest
+  // value to the server when the player leaves the game.
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) syncToServer(window.__gameBalance);
+    else loadFromServer();
+  });
+  window.addEventListener('pagehide', function() { syncToServer(window.__gameBalance); });
+
+  window.__dmWallet = {
+    url: walletUrl,
+    get: function() { return window.__gameBalance; },
+    set: function(v) { saveBalance(v); syncToServer(window.__gameBalance); },
+    reload: loadFromServer
+  };
 })();
 </script>
     <meta charset="utf-8" />
