@@ -252,7 +252,12 @@ With a fresh localStorage the valid 3h JWT reads cleanly and the toast stops.
   view shows `state=2 (unsettled)` (not "fail") · predicted deterministic result,
   bet ₹10 · settlement landed **1.1s after the round's end** (old code: 8–30s
   into the next round) with `state=1 (success)`, `status=3`, `premium` filled,
-  `winLoseAmount=+90`, profit ₹90. (Azure live check pending deploy.)
+  `winLoseAmount=+90`, profit ₹90.
+- **Verified live on Azure after redeploy (commit 81a600a,
+  `scratch/azure_final_verify.mjs`):** pending view `state=2/"unsettled"` ·
+  predicted-number bet settled **3.1s after the round's end** with
+  `state=1/"success"`, `status=3`, `premium` = predicted digit,
+  `winLoseAmount=+90` — no more "loss then late win" behaviour.
 
 ## Summary
 
