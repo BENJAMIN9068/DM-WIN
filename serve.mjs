@@ -7,22 +7,51 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { AviatorServerEngine } from './aviator_server_engine.mjs';
-import {
-  handleAdminAuth,
-  handleAdminDashboard,
-  handleAdminGames,
-  handleAdminHackBots,
-  handleAdminRecharges,
-  handleAdminWithdrawals,
-  handleAdminUsers,
-  handleAdminAudit,
-  handleAdminGateways,
-  verifyAdminAuth,
-  setWalletStore,
-  logAudit,
-  getUnifiedLiveResultForIssue,
-  getGameConfigByTypeId
-} from './admin_backend.mjs';
+
+// ── admin_backend loaded RE-EVALUATED here. ─────────────────────────────────
+// `admin_backend.mjs` is imported dynamically so that if it ever throws during
+// evaluation (e.g. a Node-version/ESM edge case on the Azure runtime) the server
+// does NOT crash on boot (which previously surfaced as a 503 + "token expired"/
+// login-redirect on every request). Each handler falls back to a safe no-op so
+// the rest of the stack (auth, game wallet, WinGo) keeps serving.
+let adminBackend = null;
+const noop = (req, res) => { res.writeHead(404, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ code: 404, result: false, msg: 'Admin backend not available' })); };
+async function loadAdminBackend() {
+  if (adminBackend) return adminBackend;
+  try {
+    adminBackend = await import('./admin_backend.mjs');
+  } catch (e) {
+    console.error('[BOOT] Failed to load admin_backend.mjs:', e.message);
+    adminBackend = {};
+  }
+  // Populate every named binding used elsewhere in this module. If the module
+  // failed to load, fall back to safe no-ops so the core stack never crashes.
+  const ab = adminBackend;
+  handleAdminAuth           = ab.handleAdminAuth             || noop;
+  handleAdminDashboard      = ab.handleAdminDashboard          || noop;
+  handleAdminGames            = ab.handleAdminGames             || noop;
+  handleAdminHackBots         = ab.handleAdminHackBots          || noop;
+  handleAdminRecharges        = ab.handleAdminRecharges         || noop;
+  handleAdminWithdrawals      = ab.handleAdminWithdrawals       || noop;
+  handleAdminUsers            = ab.handleAdminUsers             || noop;
+  handleAdminAudit            = ab.handleAdminAudit             || noop;
+  handleAdminGateways         = ab.handleAdminGateways          || noop;
+  verifyAdminAuth             = ab.verifyAdminAuth              || (() => null);
+  setWalletStore              = ab.setWalletStore               || (() => {});
+  logAudit                    = ab.logAudit                     || (() => {});
+  getUnifiedLiveResultForIssue = ab.getUnifiedLiveResultForIssue || (() => null);
+  getGameConfigByTypeId       = ab.getGameConfigByTypeId        || (() => null);
+  return adminBackend;
+}
+// Named bindings used throughout this module. Populated by loadAdminBackend() below.
+let handleAdminAuth, handleAdminDashboard, handleAdminGames, handleAdminHackBots,
+    handleAdminRecharges, handleAdminWithdrawals, handleAdminUsers, handleAdminAudit,
+    handleAdminGateways, verifyAdminAuth, setWalletStore, logAudit,
+    getUnifiedLiveResultForIssue, getGameConfigByTypeId;
+// Eagerly load at startup (ESM top-level await). Now that the let bindings above
+// are declared, this safely populates them. A bad admin_backend can never crash
+// boot (-> 503) because loadAdminBackend() catches and no-ops.
+await loadAdminBackend();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
