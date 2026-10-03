@@ -11,15 +11,46 @@
   var serverBalance = null;
   var booted = false;
 
+  // A session token is a JWT (three dot-separated parts). Anything else in the
+  // URL is a provider launch id, not our session — sending it just produced 401s.
+  function looksLikeSession(t) {
+    return typeof t === 'string' && t.split('.').length === 3 && t.length > 40;
+  }
+
   function readToken() {
     try {
       var t = localStorage.getItem('token') || localStorage.getItem('userToken') ||
               localStorage.getItem('accessToken');
-      if (t) return t;
-      // The platform appends its session token to the game URL.
+      if (looksLikeSession(t)) return t;
+    } catch (e) {}
+    // The platform's launch response appends the player's own session token to the
+    // game URL, so the wallet still resolves when localStorage is unavailable
+    // (fresh tab, WebView/APK, cleared storage).
+    try {
       var q = new URLSearchParams(location.search);
-      return q.get('token') || q.get('auth_token') || q.get('authToken') || '';
-    } catch (e) { return ''; }
+      var candidates = [q.get('token'), q.get('auth_token'), q.get('sessionToken')];
+      for (var i = 0; i < candidates.length; i++) {
+        if (looksLikeSession(candidates[i])) return candidates[i];
+      }
+    } catch (e) {}
+    return '';
+  }
+
+  // The platform keeps the signed-in user (including its displayed balance) in
+  // localStorage under "userInfo". That is the number the player sees in the
+  // platform wallet, so it is a sound last-resort fallback for the in-game chip
+  // when this device cannot reach the wallet API.
+  function readPlatformUser() {
+    try {
+      var raw = localStorage.getItem('userInfo');
+      if (!raw) return null;
+      var u = JSON.parse(raw);
+      if (!u) return null;
+      var amt = u.amount !== undefined ? u.amount : u.balance;
+      var n = Number(amt);
+      if (isFinite(n) && n >= 0) return n;
+    } catch (e) {}
+    return null;
   }
 
   function readCache() {
@@ -27,7 +58,7 @@
       var d = JSON.parse(localStorage.getItem(WALLET_KEY) || 'null');
       if (d && typeof d.balance === 'number' && d.balance >= 0) return d.balance;
     } catch (e) {}
-    return null;
+    return readPlatformUser();
   }
 
   function writeCache(bal) {
@@ -128,9 +159,11 @@
     });
   }
 
+  var loadAttempts = 0;
   function loadFromServer() {
     var cached = readCache();
     if (cached !== null) shadow = cached;
+    paint();
     xhr('GET', walletUrl(), null, function(data) {
       if (data && typeof data.balance === 'number' && isFinite(data.balance)) {
         serverBalance = data.balance;
@@ -141,13 +174,25 @@
         try {
           window.dispatchEvent(new CustomEvent('dmfirst:balance', { detail: { balance: serverBalance, slug: SLUG } }));
         } catch (e) {}
+        return;
       }
+      // No session yet (the platform may still be writing it) — retry briefly.
+      loadAttempts++;
+      if (loadAttempts <= 6) setTimeout(loadFromServer, 700 * loadAttempts);
     });
   }
 
   loadFromServer();
   setInterval(paint, 300);
   document.addEventListener('DOMContentLoaded', paint);
+
+  // The platform updates the session and the user's balance in another tab or on
+  // its own screens; mirror that into the game chip.
+  window.addEventListener('storage', function(e) {
+    if (!e || (e.key !== 'userInfo' && e.key !== 'token' && e.key !== WALLET_KEY)) return;
+    if (serverBalance === null) paint();
+    loadFromServer();
+  });
 
   document.addEventListener('visibilitychange', function() {
     if (document.hidden) return;

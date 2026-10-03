@@ -1069,7 +1069,14 @@ async function handleRequest(req, res) {
       if (fs.existsSync(gFilePath) && fs.statSync(gFilePath).isFile()) {
         const ext = path.extname(gFilePath).toLowerCase();
         const ct = MIME_TYPES[ext] || 'application/octet-stream';
-        res.writeHead(200, { 'Content-Type': ct, 'Access-Control-Allow-Origin': '*' });
+        const headers = { 'Content-Type': ct, 'Access-Control-Allow-Origin': '*' };
+        // The game's HTML embeds the wallet bridge. Without an explicit policy the
+        // browser is free to reuse a stale copy, which left players running an
+        // older bridge (the one that showed 0.00 / wiped the balance) long after a
+        // fix had been deployed. Hashed assets keep their own caching.
+        if (ext === '.html' || ext === '.htm') headers['Cache-Control'] = 'no-store, must-revalidate';
+        else headers['Cache-Control'] = 'public, max-age=3600';
+        res.writeHead(200, headers);
         fs.createReadStream(gFilePath).pipe(res);
       } else {
         // A missing *asset* (chunk, wasm, texture, audio…) must 404. Serving the
@@ -3039,13 +3046,37 @@ async function handleRequest(req, res) {
         'tower-dash':    '/games/tower-dash/'
       };
       if (localGameMap[gc]) {
+        // Hand the game the caller's own session in its launch URL. The game page
+        // then always knows which wallet to read, even when the platform's
+        // localStorage is unavailable (fresh tab, WebView/APK, cleared storage) —
+        // which is what made the in-game wallet sit at 0.00 while the platform
+        // wallet still showed a balance. The token is the player's own, travels
+        // inside their own launch URL, and expires with their session.
+        let launchUrl = localGameMap[gc];
+        let launchToken = String(
+          (req.headers && (req.headers['authorization'] || req.headers['x-auth-token'] || req.headers['token'])) || ''
+        ).replace(/^Bearer\s+/i, '').trim();
+        if (!launchToken && req.url) {
+          try {
+            const u = new URL(req.url, 'http://localhost');
+            launchToken = u.searchParams.get('token') || u.searchParams.get('auth_token') || '';
+          } catch (e) {}
+        }
+        if (launchToken) {
+          try {
+            jwt.verify(launchToken, JWT_SECRET); // never forward an unverifiable token
+            launchUrl += (launchUrl.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(launchToken);
+          } catch (e) {
+            console.warn(`[game] launch token rejected for ${gc}: ${e.message}`);
+          }
+        }
         res.end(JSON.stringify({
           code: 0,
           result: true,
           msg: 'success',
           data: {
-            url: localGameMap[gc],
-            jumpUrl: localGameMap[gc],
+            url: launchUrl,
+            jumpUrl: launchUrl,
             gameType: 99,
             isLocal: true
           }
