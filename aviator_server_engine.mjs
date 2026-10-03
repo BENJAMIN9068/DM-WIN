@@ -2,10 +2,16 @@ import { WebSocketServer, WebSocket } from 'ws';
 import crypto from 'crypto';
 
 export class AviatorServerEngine {
-  constructor(getUsersFn, saveUsersFn, getCurrentUserNumberFn) {
+  constructor(getUsersFn, saveUsersFn, getCurrentUserNumberFn, resolveUserIdFromTokenFn = null) {
     this.getUsers = getUsersFn;
     this.saveUsers = saveUsersFn;
     this.getCurrentUserNumber = getCurrentUserNumberFn;
+    // Server-side identity resolver: (token) => userId | null. Supplied by the
+    // host server so a socket can never pick its own wallet.
+    this.resolveUserIdFromToken = typeof resolveUserIdFromTokenFn === 'function' ? resolveUserIdFromTokenFn : null;
+
+    this.minBet = 1.0;
+    this.maxBet = 10000.0;
 
     this.currentRoundId = 158500;
     this.currentStage = 1; // 1 = Bet, 2 = Run, 3 = End
@@ -298,12 +304,27 @@ export class AviatorServerEngine {
     }, 3500);
   }
 
+  // Only ever resolves a wallet for an identity the server vouched for. There is
+  // deliberately no "demo balance" fallback: an unknown id must not be able to
+  // move money, and a fabricated balance must never be shown as real.
   getUser(userId) {
     const users = this.getUsers();
-    if (userId && users[userId]) return users[userId];
+    if (userId === undefined || userId === null || userId === '') return null;
+    const key = String(userId);
+    if (users[key]) return users[key];
+    // The map is phone-keyed; also accept a numeric userId (the JWT subject).
+    const found = Object.values(users).find(u => u && String(u.userId) === key);
+    if (found) return found;
     const curr = this.getCurrentUserNumber();
     if (curr && users[curr]) return users[curr];
-    return  { amount: 1250, nickName: "Player" };
+    return null;
+  }
+
+  // Resolves the wallet for a connected socket, or null when the socket has not
+  // proven who it is.
+  walletFor(client) {
+    if (!client || !client.authenticated || !client.userId) return null;
+    return this.getUser(client.userId);
   }
 
   handleClientMessage(client, rawData) {
@@ -318,11 +339,36 @@ export class AviatorServerEngine {
 
       // Login
       if (data.type === 'login' || data.cmd === 'login') {
-        const uId = data.userId || this.getCurrentUserNumber() || '9068839558';
-        const userObj = this.getUser(uId);
+        // The identity must come from the server (WebSocket upgrade) or from a
+        // token this server can verify. A client-supplied userId on its own is
+        // never trusted, because it would let anyone pick someone else's wallet.
+        let verifiedId = null;
+        if (client.dmUserId) {
+          verifiedId = String(client.dmUserId);
+        } else if (data.token && this.resolveUserIdFromToken) {
+          try { verifiedId = this.resolveUserIdFromToken(String(data.token)); } catch (e) { verifiedId = null; }
+        }
+
+        const userObj = verifiedId ? this.getUser(verifiedId) : null;
+
+        if (!userObj) {
+          client.userId = null;
+          client.authenticated = false;
+          client.playerBalance = 0;
+          client.send(JSON.stringify({ type: "login", user: null, code: 401 }));
+          this.sendTo(client, "loginError", {
+            code: 401,
+            errorMessage: verifiedId ? 'Wallet not found for this session.' : 'Your session has expired. Please log in again.'
+          });
+          console.log(`[Aviator] Rejected unverified login (claimed id: ${data.userId ?? 'none'})`);
+          return;
+        }
+
+        const uId = String(verifiedId);
         client.userId = uId;
+        client.authenticated = true;
         client.userName = data.userName || userObj.nickName || userObj.username || uId;
-        client.playerBalance = typeof userObj.amount === 'number' ? userObj.amount : 1250;
+        client.playerBalance = typeof userObj.amount === 'number' ? userObj.amount : 0;
 
         if (!client.activeBets) client.activeBets = {};
 
@@ -343,10 +389,12 @@ export class AviatorServerEngine {
           }
         }
 
-        client.send(JSON.stringify({
-          type: "login",
-          user: { name: client.userName, id: 65480 }
-        }));
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: "login",
+            user: { name: client.userName, id: uId }
+          }));
+        }
 
         // Send full synchronized game state (init) with restored active bets
         this.sendTo(client, "init", {
@@ -359,7 +407,7 @@ export class AviatorServerEngine {
           activeBets: restoredActiveBets,
           user: {
             balance: client.playerBalance,
-            userId: "65480",
+            userId: client.userId,
             username: client.userName,
             profileImage: "0.png",
             settings: {
@@ -429,12 +477,34 @@ export class AviatorServerEngine {
 
         if (extCmd === 'betHandler' || extCmd === 'bet') {
           const betId = params.betId || 1;
-          const amount = Number(params.bet || 10.0);
+          const reject = (errorMessage) => this.sendTo(client, "bet", { code: 400, betId, errorMessage });
+
+          if (!client.authenticated || !client.userId) {
+            console.log(`[Aviator] Bet rejected: unauthenticated socket (panel ${betId})`);
+            return reject('Your session has expired. Please log in again.');
+          }
+          // Bets are only valid during the betting window. Without this a client
+          // could bet mid-flight and cash out immediately for a guaranteed profit.
+          if (this.currentStage !== 1) {
+            return reject('Betting is closed for this round.');
+          }
+          const amount = Number(params.bet);
+          if (!Number.isFinite(amount) || amount < this.minBet || amount > this.maxBet) {
+            console.log(`[Aviator] Bet rejected: invalid amount ${params.bet}`);
+            return reject(`Bet amount must be between ₹${this.minBet} and ₹${this.maxBet}.`);
+          }
+          if (client.activeBets && client.activeBets[betId] && !client.activeBets[betId].cashedOut) {
+            return reject('A bet is already active on this panel.');
+          }
           const userObj = this.getUser(client.userId);
+          if (!userObj) {
+            client.authenticated = false;
+            return reject('Wallet not found for this session.');
+          }
           const currentBal = typeof userObj.amount === 'number' ? userObj.amount : 0;
 
           if (currentBal >= amount) {
-            userObj.amount = Math.max(0, +(currentBal - amount).toFixed(2));
+            userObj.amount = +(currentBal - amount).toFixed(2);
             client.playerBalance = userObj.amount;
             this.saveUsers();
 
@@ -463,7 +533,7 @@ export class AviatorServerEngine {
               code: 200,
               betId: betId,
               bet: amount,
-              player_id: "65480"
+              player_id: client.userId
             });
 
             this.sendTo(client, "newBalance", {
@@ -477,7 +547,7 @@ export class AviatorServerEngine {
               betsCount: this.simulatedBets.length + 1,
               bets: [
                 {
-                  player_id: "65480",
+                  player_id: client.userId,
                   username: client.userName || "Player",
                   bet: amount,
                   profileImage: "0.png",
@@ -499,15 +569,26 @@ export class AviatorServerEngine {
             betObj = this.userBets.get(client.userId).get(betId);
           }
 
-          if (betObj && !betObj.cashedOut && this.currentStage === 2) {
-            betObj.cashedOut = true;
+          if (betObj && !betObj.cashedOut && !betObj.settling && this.currentStage === 2) {
+            const userObj = this.walletFor(client);
+            if (!userObj) {
+              return this.sendTo(client, "cashOut", { code: 401, betId, errorMessage: 'Your session has expired. Please log in again.' });
+            }
+
+            betObj.settling = true;
             const mult = this.currentMultiplier;
             const winAmount = +(betObj.bet * mult).toFixed(2);
 
-            const userObj = this.getUser(client.userId);
-            userObj.amount = +(userObj.amount + winAmount).toFixed(2);
-            client.playerBalance = userObj.amount;
-            this.saveUsers();
+            try {
+              userObj.amount = +(userObj.amount + winAmount).toFixed(2);
+              client.playerBalance = userObj.amount;
+              this.saveUsers();
+              // Marked settled only after the credit succeeds, so a failed credit
+              // leaves the bet claimable instead of silently losing the win.
+              betObj.cashedOut = true;
+            } finally {
+              betObj.settling = false;
+            }
 
             console.log(`[Aviator Cashout] User ${client.userId} cashed out @ ${mult}x: Win ₹${winAmount}. New balance: ₹${userObj.amount}`);
 
@@ -528,7 +609,7 @@ export class AviatorServerEngine {
               code: 200,
               cashouts: [
                 {
-                  player_id: "65480",
+                  player_id: client.userId,
                   username: client.userName || "Player",
                   bet: betObj.bet,
                   multiplier: mult,
@@ -545,11 +626,16 @@ export class AviatorServerEngine {
           }
 
           if (betObj && !betObj.cashedOut && this.currentStage === 1) {
+            const userObj = this.walletFor(client);
+            if (!userObj) {
+              return this.sendTo(client, "cancel", { code: 401, betId, errorMessage: 'Your session has expired. Please log in again.' });
+            }
+
             const refund = betObj.bet;
-            const userObj = this.getUser(client.userId);
             userObj.amount = +(userObj.amount + refund).toFixed(2);
             client.playerBalance = userObj.amount;
             this.saveUsers();
+            betObj.cashedOut = true;
 
             if (client.activeBets) delete client.activeBets[betId];
             if (this.userBets.get(client.userId)) {
@@ -580,8 +666,8 @@ export class AviatorServerEngine {
             rounds: this.recentRoundsHistory
           });
         } else if (extCmd === 'updateBalanceHandler' || extCmd === 'updateBalance') {
-          const userObj = this.getUser(client.userId);
-          client.playerBalance = typeof userObj.amount === 'number' ? userObj.amount : 1250;
+          const userObj = this.walletFor(client);
+          client.playerBalance = userObj && typeof userObj.amount === 'number' ? userObj.amount : 0;
           this.sendTo(client, "newBalance", {
             code: 200,
             newBalance: client.playerBalance

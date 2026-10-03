@@ -30,7 +30,8 @@ const ICONS = {
 
 class AdminConsoleApp {
   constructor() {
-    this.token = localStorage.getItem('forntman_admin_token') || 'admin_token_default_active_session';
+    // No default token: the admin must log in to obtain a real session token.
+    this.token = localStorage.getItem('forntman_admin_token') || '';
     this.activeTab = 'dashboard';
     this.dateRange = '7d';
     this.pollingTimer = null;
