@@ -1,6 +1,6 @@
 # DEBUG REPORT — DM-WIN (WIN-CLUB platform)
 
-Repo `https://github.com/BENJAMIN9068/DM-WIN` · local `C:\Users\godfa\OneDrive\Desktop\veer` · `main` @ `3253f4f`, clean tree.
+Repo `https://github.com/BENJAMIN9068/DM-WIN` · local `C:\Users\godfa\OneDrive\Desktop\veer` · `main` @ `2d294c1`.
 
 **How this was produced.** Full read of `serve.mjs` (3052 lines), `admin_backend.mjs` (1102), `aviator_server_engine.mjs` (602),
 `archived_site/admin/admin_app.js` and the aviator client, plus three executable harnesses that call the *real* code and print
@@ -163,6 +163,28 @@ With a fresh localStorage the valid 3h JWT reads cleanly and the toast stops.
   — only the pre-built `archived_site/` is shipped and served statically by `serve.mjs`.
   → A git push deploys `serve.mjs` + `archived_site/` directly (the `index.html`
   polyfill above is therefore live on Azure after push). `npm install && npm start`.
+
+### Azure 503 root cause (found on live deploy, fixed + verified on Azure)
+- **Symptom:** after push+deploy the whole site returned **503**; browser then saw
+  "login/refresh keeps failing → logout" (connection errors masquerading as auth failure).
+- **Root cause 1 (server crash on boot):** Azure's Node (v24) failed to resolve the static
+  `import { setWalletStore } from './admin_backend.mjs'` at `serve.mjs` line ~21
+  (`SyntaxError: ... does not provide an export named 'setWalletStore'`) → `serve.mjs`
+  crashed before binding a port → 503 on every request.
+  **Fix:** `admin_backend.mjs` is now loaded via **top-level `await import()`** wrapped in
+  `try/catch`; all its handlers fall back to safe no-ops so a module-level failure can
+  never crash boot again.
+- **Root cause 2 (account missing on the Azure MongoDB):** the user `9123456789` only
+  existed in the LOCAL database. Azure's `MONGODB_URI` is a different cluster, so
+  `POST /api/webapi/Login` answered `code 101 "Account does not exist, please register
+  first."` for every attempt → the app could never get a token on Azure.
+  **Fix:** registered the account on Azure via `POST /api/webapi/Register`
+  (phone `9123456789`, password `admin@FORNTMAN2026!`, bcrypt hash on creation).
+- **Verified live on Azure (node harnesses, `scratch/azure_*.mjs`):**
+  `GET /` → 200 · Login → 200 code 0 (token) · GetUserInfo → 200 · game-wallet
+  fund/deduct → 200 · **guaranteed WinGo win** (all 10 numbers × ₹10 on one open issue):
+  balance 200 → 100 (stakes) → **190 after settle** (= +90 = 9×10 win) → win is
+  **credited and persisted in the Azure Mongo**, matching the local proof.
 
 ## Summary
 
