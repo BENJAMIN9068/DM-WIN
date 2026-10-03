@@ -208,7 +208,11 @@ With a fresh localStorage the valid 3h JWT reads cleanly and the toast stops.
   from 8h to **7d** so normal sessions stop lapsing mid-use.
 - **Verified locally (E2E, `scratch/recharge_e2e.mjs`):** balance 490 → submit
   ₹500 recharge → `code 0`, status `Approved` → balance **990** · `GetAllwallets`
-  200 with `amount: 990`. (Azure verification pending redeploy.)
+  200 with `amount: 990`.
+- **Verified live on Azure after redeploy (commit 5000735, `scratch/await_newcode.mjs`
+  which detects the new build via the 7d token TTL and re-runs the E2E):** login →
+  200 · recharge ₹500 → `code 0` "Recharge approved & credited to your wallet!",
+  status `Approved` · balance **190 → 690** · `GetAllwallets` 200 with `amount: 690`.
 - **Note for the owner:** the Azure account for `9123456789` was registered with
   password `admin@FORNTMAN2026!` (Azure's MongoDB is a different cluster than the
   local one; the local test account still uses its original password).
