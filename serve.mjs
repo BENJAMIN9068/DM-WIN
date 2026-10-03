@@ -1074,8 +1074,15 @@ async function handleRequest(req, res) {
         // browser is free to reuse a stale copy, which left players running an
         // older bridge (the one that showed 0.00 / wiped the balance) long after a
         // fix had been deployed. Hashed assets keep their own caching.
-        if (ext === '.html' || ext === '.htm') headers['Cache-Control'] = 'no-store, must-revalidate';
-        else headers['Cache-Control'] = 'public, max-age=3600';
+        if (ext === '.html' || ext === '.htm') {
+          headers['Cache-Control'] = 'no-store, must-revalidate';
+          // The launch URL carries the player's session token. Without a referrer
+          // policy that token would ride along in the Referer header to the
+          // third-party scripts the game pages load (analytics, error reporting).
+          headers['Referrer-Policy'] = 'no-referrer';
+        } else {
+          headers['Cache-Control'] = 'public, max-age=3600';
+        }
         res.writeHead(200, headers);
         fs.createReadStream(gFilePath).pipe(res);
       } else {
