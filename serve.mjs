@@ -167,8 +167,33 @@ function findUserById(idOrNumber) {
   return Object.values(users).find(u => u && (String(u.userId) === s || String(u.number) === s)) || null;
 }
 
+// Reconcile a user's balance with MongoDB (the source of truth shared across
+// every app instance). Credits (recharge-accept, WinGo wins, admin set-balance)
+// write to Mongo; if this instance's in-memory copy did not receive the write
+// (multi-instance load balancing), a read must not trust its stale cache.
+// Call this before returning any balance to the client.
+async function refreshAmountFromDb(user) {
+  if (!user || user.userId === undefined || user.userId === null) return;
+  if (isMongoConnected && MongoUser && mongoose.connection.readyState === 1) {
+    try {
+      const doc = await MongoUser.findOne({ userId: user.userId }, { amount: 1 }).lean();
+      if (doc && typeof doc.amount === 'number' && Number.isFinite(doc.amount)) {
+        user.amount = doc.amount;
+      }
+    } catch (e) { /* transient DB error: keep the in-memory value */ }
+  }
+}
+
 async function creditUserByUserId(userId, amount) {
-  const user = findUserById(userId);
+  let user = findUserById(userId);
+  // Mongo fallback: credit must work even if this instance's in-memory map has
+  // not seen this user since boot (multi-instance / late hydration).
+  if (!user && isMongoConnected && MongoUser && mongoose.connection.readyState === 1) {
+    try {
+      const doc = await MongoUser.findOne({ userId: Number(userId) }).lean();
+      if (doc) { user = doc; if (doc.number) users[doc.number] = doc; }
+    } catch (e) {}
+  }
   if (!user) return null;
   const amt = Number(amount) || 0;
   if (isMongoConnected && MongoUser && mongoose.connection.readyState === 1) {
@@ -1100,15 +1125,41 @@ async function handleRequest(req, res) {
     }
     if (req.method === 'POST') {
       const body = await getRequestBody(req);
-      const reported = parseFloat(body.balance);
-      // Validate: must be a finite, non-negative balance reported by the game iframe.
-      if (!Number.isFinite(reported) || reported < 0) {
-        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify({ code: 1, result: false, msg: 'Invalid balance' }));
-        return;
+
+      // A hardened game bridge reports how the balance *moved* (delta), having
+      // loaded the authoritative balance first. That is the only report that can
+      // safely be applied: an absolute value is meaningless when the sender may
+      // still be holding a boot-time placeholder, which is how a stale 0 used to
+      // erase a real balance. Older bridges keep working via the fallback below.
+      const rawDelta = body.delta;
+      const hasDelta = rawDelta !== undefined && rawDelta !== null && rawDelta !== '';
+      let delta;
+      let reported = null;
+
+      if (hasDelta) {
+        delta = parseFloat(rawDelta);
+        if (!Number.isFinite(delta)) {
+          res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ code: 1, result: false, msg: 'Invalid delta' }));
+          return;
+        }
+      } else {
+        reported = parseFloat(body.balance);
+        // Validate: must be a finite, non-negative balance reported by the game iframe.
+        if (!Number.isFinite(reported) || reported < 0) {
+          res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ code: 1, result: false, msg: 'Invalid balance' }));
+          return;
+        }
       }
+
+      // The in-memory copy can be stale across instances; Mongo holds the truth.
+      await refreshAmountFromDb(user);
       const current = (typeof user.amount === 'number' && Number.isFinite(user.amount)) ? user.amount : 0.00;
-      let delta = reported - current;
+
+      // With no explicit delta the report is an absolute balance, which is only
+      // meaningful relative to what we currently hold.
+      if (!hasDelta) delta = reported - current;
 
       // Apply the game's win/loss delta:
       //  - positive delta (a win) is capped per-sync to bound one-shot minting;
@@ -1129,10 +1180,11 @@ async function handleRequest(req, res) {
             console.error(`[wallet] persist failed for userId ${user.userId}:`, err.message));
         }
         saveUsers();
+        console.log(`[wallet] ₹${oldBal} → ₹${user.amount} (game: ${body.slug || 'unknown'}, userId ${user.userId}, delta ₹${delta})`);
       }
-      console.log(`[wallet] ₹${oldBal} → ₹${user.amount} (game: ${body.slug || 'unknown'}, userId ${user.userId})`);
       res.end(JSON.stringify({ code: 0, result: true, balance: user.amount }));
     } else {
+      await refreshAmountFromDb(user);
       const currentBal = (typeof user.amount === 'number' && Number.isFinite(user.amount)) ? user.amount : 0.00;
       res.end(JSON.stringify({ code: 0, result: true, balance: currentBal }));
     }
@@ -1691,6 +1743,7 @@ async function handleRequest(req, res) {
         return;
       }
 
+      await refreshAmountFromDb(user);
       const userBal = (typeof user.amount === 'number') ? user.amount : 0.00;
 
       res.end(JSON.stringify({
@@ -1727,6 +1780,7 @@ async function handleRequest(req, res) {
         return;
       }
 
+      await refreshAmountFromDb(user);
       const userBal = (typeof user.amount === 'number') ? user.amount : 0.00;
       res.end(JSON.stringify({
         code: 0,
@@ -2182,6 +2236,7 @@ async function handleRequest(req, res) {
     if (endpoint.includes('GetBalance') || endpoint.includes('GetAllwallets') || endpoint.includes('GetSaasAllwallets') || endpoint.includes('GetARGameAndPlatWallets') || endpoint.includes('GetBalanceByARGame') || endpoint.includes('NotifyARGameRecover') || endpoint.includes('Transfer')) {
       await resolvePendingBets();
       const user = getActiveUser(req) || { amount: 0.00 };
+      await refreshAmountFromDb(user);
       const bal = (typeof user.amount === 'number') ? user.amount : 0.00;
       res.end(JSON.stringify({
         code: 0,

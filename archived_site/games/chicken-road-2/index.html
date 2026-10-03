@@ -3,55 +3,44 @@
 (function() {
   var WALLET_KEY = 'dmfirst_game_wallet';
   var SLUG = 'chicken-road-2';
-  window.__gameBalance = 0;
-  window.__gameBalanceDeducted = 0;
+
+  // The authoritative balance is held here, not in window.__gameBalance, so a
+  // game writing its own placeholder can never be mistaken for the truth.
+  var serverBalance = null;
+  var booted = false;
 
   function readToken() {
     try {
       var t = localStorage.getItem('token') || localStorage.getItem('userToken') ||
               localStorage.getItem('accessToken');
       if (t) return t;
-      // The platform appends its session token to the game URL; accept it when
-      // localStorage is empty so the in-game wallet can still authenticate.
-      try {
-        var q = new URLSearchParams(location.search);
-        return q.get('token') || q.get('auth_token') || q.get('authToken') || '';
-      } catch (e) { return ''; }
+      // The platform appends its session token to the game URL.
+      var q = new URLSearchParams(location.search);
+      return q.get('token') || q.get('auth_token') || q.get('authToken') || '';
     } catch (e) { return ''; }
   }
 
-  function readInitialBalance() {
+  function readCache() {
     try {
-      var raw = localStorage.getItem(WALLET_KEY);
-      if (raw) {
-        var d = JSON.parse(raw);
-        if (d && typeof d.balance === 'number' && d.balance >= 0) return d.balance;
-      }
+      var d = JSON.parse(localStorage.getItem(WALLET_KEY) || 'null');
+      if (d && typeof d.balance === 'number' && d.balance >= 0) return d.balance;
     } catch (e) {}
-    return 0;
+    return null;
   }
 
-  function saveBalance(newBal) {
+  function writeCache(bal) {
     try {
-      newBal = Math.max(0, parseFloat(Number(newBal).toFixed(2)));
-      if (!isFinite(newBal)) return;
-      window.__gameBalance = newBal;
       var existing = {};
       try { existing = JSON.parse(localStorage.getItem(WALLET_KEY) || '{}'); } catch (e) {}
-      existing.balance = newBal;
+      existing.balance = bal;
       existing.time = Date.now();
       localStorage.setItem(WALLET_KEY, JSON.stringify(existing));
-      try {
-        window.dispatchEvent(new CustomEvent('dmfirst:balance', { detail: { balance: newBal, slug: SLUG } }));
-      } catch (e) {}
     } catch (e) {}
   }
 
-  // Endpoint that always resolves, whatever origin/host the page is served from.
   function walletUrl() {
-    var u = '/api/game-wallet';
     var t = readToken();
-    return t ? u + '?token=' + encodeURIComponent(t) : u;
+    return '/api/game-wallet' + (t ? '?token=' + encodeURIComponent(t) : '');
   }
 
   function xhr(method, url, body, cb) {
@@ -74,56 +63,110 @@
     } catch (e) { cb(null, 0); }
   }
 
-  // Async on purpose: a synchronous wallet fetch here blocked the main thread and
-  // left the game on its loading screen whenever /api/game-wallet was slow.
+  // Keeps the in-game balance chip in sync for the games that render their own
+  // DOM element instead of reading window.__gameBalance.
+  function paint() {
+    try {
+      var el = document.querySelector('[data-testid="menu-balance"]');
+      if (!el) return;
+      var bal = serverBalance === null ? readCache() : serverBalance;
+      if (bal === null || bal === undefined) return;
+      if (el.__lastBal === bal) return;
+      el.__lastBal = bal;
+      var formatted = Number(bal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      var sprite = '/games/' + SLUG + '/static/svg/sprite.4de80bac.svg#INR';
+      el.innerHTML = formatted + '<svg width="18" height="18" viewBox="0 0 18 18" style="fill: rgb(255, 255, 255); margin-left: 4px;"><use xlink:href="' + sprite + '"></use></svg>';
+    } catch (e) {}
+  }
+
+  // window.__gameBalance is the contract the game bundles read (and write) for
+  // the wallet. Route it through the authoritative value once it is known.
+  var shadow = readCache();
+  if (shadow === null) shadow = 0;
+  try {
+    Object.defineProperty(window, '__gameBalance', {
+      configurable: true,
+      get: function() { return serverBalance === null ? shadow : serverBalance; },
+      set: function(v) {
+        var n = Number(v);
+        if (!isFinite(n)) return;
+        if (serverBalance === null) { shadow = n; paint(); return; }
+        // The game changed the balance itself: forward only the difference.
+        var delta = n - serverBalance;
+        serverBalance = n;
+        writeCache(n);
+        if (delta !== 0) reportDelta(delta);
+        paint();
+      }
+    });
+  } catch (e) {
+    window.__gameBalance = shadow;
+  }
+
+  // Reports how the balance moved. Only ever called with a real delta measured
+  // against a loaded server balance, so it cannot push a placeholder.
+  var reportQueue = [];
+  var reporting = false;
+  function reportDelta(delta) {
+    if (!booted || !delta || !isFinite(delta)) return;
+    reportQueue.push(delta);
+    if (reporting) return;
+    reporting = true;
+    return flushReports();
+  }
+
+  function flushReports() {
+    var total = reportQueue.reduce(function(a, b) { return a + b; }, 0);
+    reportQueue = [];
+    if (!total) { reporting = false; return; }
+    var target = Math.max(0, serverBalance);
+    xhr('POST', walletUrl(), { balance: target, slug: SLUG, delta: total }, function() {
+      if (reportQueue.length) return flushReports();
+      reporting = false;
+    });
+  }
+
   function loadFromServer() {
-    window.__gameBalance = readInitialBalance();
+    var cached = readCache();
+    if (cached !== null) shadow = cached;
     xhr('GET', walletUrl(), null, function(data) {
-      if (data && typeof data.balance === 'number') {
-        window.__gameBalance = data.balance;
-        saveBalance(data.balance);
+      if (data && typeof data.balance === 'number' && isFinite(data.balance)) {
+        serverBalance = data.balance;
+        shadow = data.balance;
+        booted = true;           // only now may anything be written back
+        writeCache(data.balance);
+        paint();
+        try {
+          window.dispatchEvent(new CustomEvent('dmfirst:balance', { detail: { balance: serverBalance, slug: SLUG } }));
+        } catch (e) {}
       }
     });
   }
 
-  function syncToServer(balance) {
-    xhr('POST', walletUrl(), { balance: balance, slug: SLUG }, function() {});
-  }
-
   loadFromServer();
+  setInterval(paint, 300);
+  document.addEventListener('DOMContentLoaded', paint);
 
-  // Keep the in-game balance element in sync (works for the games that render
-  // their own DOM balance chip instead of reading window.__gameBalance).
-  function syncMenuBalance() {
-    try {
-      var el = document.querySelector('[data-testid="menu-balance"]');
-      if (el) {
-        var bal = (window.__gameBalance === undefined || window.__gameBalance === null) ? 0 : window.__gameBalance;
-        var formatted = Number(bal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        if (el.__lastBal !== bal) {
-          el.__lastBal = bal;
-          var sprite = '/' + 'games/' + SLUG + '/static/svg/sprite.4de80bac.svg#INR';
-          el.innerHTML = formatted + '<svg width="18" height="18" viewBox="0 0 18 18" style="fill: rgb(255, 255, 255); margin-left: 4px;"><use xlink:href="' + sprite + '"></use></svg>';
-        }
-      }
-    } catch (e) {}
-  }
-  setInterval(syncMenuBalance, 300);
-  document.addEventListener('DOMContentLoaded', syncMenuBalance);
-
-  // Re-read the balance whenever the tab regains focus, and push the latest
-  // value to the server when the player leaves the game.
   document.addEventListener('visibilitychange', function() {
-    if (document.hidden) syncToServer(window.__gameBalance);
-    else loadFromServer();
+    if (document.hidden) return;
+    // Refresh from the server; never write while the tab is going away.
+    loadFromServer();
   });
-  window.addEventListener('pagehide', function() { syncToServer(window.__gameBalance); });
 
   window.__dmWallet = {
     url: walletUrl,
-    get: function() { return window.__gameBalance; },
-    set: function(v) { saveBalance(v); syncToServer(window.__gameBalance); },
+    get: function() { return serverBalance === null ? shadow : serverBalance; },
+    isLoaded: function() { return serverBalance !== null; },
+    set: function(v) { try { window.__gameBalance = v; } catch (e) {} },
     reload: loadFromServer
+  };
+
+  window.__gameWalletBridge = {
+    slug: SLUG,
+    balance: function() { return serverBalance === null ? shadow : serverBalance; },
+    loaded: function() { return serverBalance !== null; },
+    // The server-side balance as the game is allowed to see it.
+    refresh: loadFromServer
   };
 })();
 </script><script id="__CR1_RELIABILITY_SHIELD__">
