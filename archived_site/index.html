@@ -152,37 +152,53 @@
 				} catch (e) {}
 
 				// Fetch authoritative current balance directly from backend
-				fetch('/api/webapi/GetUserInfo', {
-					headers: {
-						'Authorization': (localStorage.getItem('tokenHeader') || 'Bearer ') + token
+				(function authBalanceRetry(token) {
+					var header = function() {
+						return { 'Authorization': (localStorage.getItem('tokenHeader') || 'Bearer ') + token };
+					};
+					function doFetch() {
+						return fetch('/api/webapi/GetUserInfo', { headers: header() });
 					}
-				})
-				.then(function(res) {
-					if (res.status === 401) {
-						// Only genuine expired auth clears session
-						localStorage.removeItem('token');
-						localStorage.removeItem('userInfo');
-						if (!location.hash.startsWith('#/login') && !location.hash.startsWith('#/register') && !location.hash.startsWith('#/FORNTMAN-OG')) {
-							location.replace('/#/login');
+					doFetch().then(function(res) {
+						if (res.status === 401) {
+							// Transient/redirect 401s must not instantly nuke a valid session.
+							// Re-read the token fresh and retry once before clearing it.
+							var freshToken = localStorage.getItem('token');
+							if (freshToken && freshToken !== token) {
+								token = freshToken;
+								return doFetch().then(function(res2) { return res2; });
+							}
+							return res; // genuinely expired
 						}
+						return res;
+					}).then(function(res) {
+						if (res.status === 401) {
+							// Only genuine expired auth clears session
+							localStorage.removeItem('token');
+							localStorage.removeItem('userInfo');
+							localStorage.removeItem('walletStore');
+							if (!location.hash.startsWith('#/login') && !location.hash.startsWith('#/register') && !location.hash.startsWith('#/FORNTMAN-OG')) {
+								location.replace('/#/login');
+							}
+							return null;
+						}
+						if (res.ok) return res.json();
 						return null;
-					}
-					if (res.ok) return res.json();
-					return null;
-				})
-				.then(function(res) {
-					if (!res || !res.data) return;
-					var user = res.data;
-					var bal = parseFloat(user.amount !== undefined ? user.amount : user.balance);
-					if (!isNaN(bal) && bal >= 0) {
-						setMainBalance(bal);
-						var ev = new CustomEvent('balanceUpdated', { detail: { amount: bal } });
-						window.dispatchEvent(ev);
-					}
-				})
-				.catch(function(err) {
-					console.warn('Balance sync network warning', err);
-				});
+					})
+					.then(function(res) {
+						if (!res || !res.data) return;
+						var user = res.data;
+						var bal = parseFloat(user.amount !== undefined ? user.amount : user.balance);
+						if (!isNaN(bal) && bal >= 0) {
+							setMainBalance(bal);
+							var ev = new CustomEvent('balanceUpdated', { detail: { amount: bal } });
+							window.dispatchEvent(ev);
+						}
+					})
+					.catch(function(err) {
+						console.warn('Balance sync network warning', err);
+					});
+				})(token);
 			}
 
 			// When user comes back to main app tab or navigates
@@ -328,6 +344,128 @@
 			l.crossOrigin = '';
 			l.href = '/assets/css/index-DR8q6HEk.css';
 			document.head.appendChild(l);
+
+			// =========================================================
+			// FORNTMAN-OG auth guard polyfill
+			// =========================================================
+			// The minified Vue bundle's axios interceptor reads the token
+			// from localStorage and, on a single transient 401, shows
+			// "token has expired please login again" and clears the session
+			// (cascade on every refresh / game return). This polyfill runs
+			// BEFORE the bundle loads and guarantees that every same-origin
+			// API request carries `Authorization: Bearer <token>` read
+			// directly from localStorage (so no request goes out anonymous),
+			// and retries once on a 401 before giving up. This breaks the
+			// refresh-loop without touching the minified bundle.
+			(function() {
+				'use strict';
+				if (window.__dshAuthPolyfilled) return;
+				window.__dshAuthPolyfilled = true;
+
+				function authToken() {
+					// ALWAYS use a well-formed 'Bearer ' prefix (with trailing space).
+					// Some bundle versions stored tokenHeader as 'Bearer' (no space),
+					// which builds "Bearer<token>" -> invalid scheme -> 401 -> toast.
+					var t = localStorage.getItem('token') || '';
+					if (t) return 'Bearer ' + t;
+					return '';
+				}
+
+				// --- token-store normalization ----------------------------------
+				// The minified Vue bundle (index-DSllDNEm.js) sometimes stores the JWT
+				// under a different key (e.g. its own Pinia store) instead of literal
+				// localStorage["token"], so after a refresh the token vanishes and every
+				// API call goes out anonymous -> 401 -> "token has expired please login
+				// again" toast + session clear + Withdraw shows 0. We observe ANY write
+				// of a value starting with "eyJ" (a JWT) and mirror it to key "token",
+				// and also re-hydrate "token" from an existing JWT on hard refresh.
+				// ALSO normalize `tokenHeader` to 'Bearer ' (with trailing space): the
+				// bundle builds Authorization as tokenHeader + token, and storing
+				// 'Bearer' (no space) yields 'Bearer<jwt>' (invalid scheme) -> 401.
+				(function() {
+					function looksLikeJwt(v) { return typeof v === 'string' && v.length > 20 && v.indexOf('eyJ') === 0 && v.split('.').length === 3; }
+					function mirror(token) {
+						try { window.localStorage.setItem.call(window.localStorage, 'token', token); window.localStorage.setItem.call(window.localStorage, 'tokenHeader', 'Bearer '); } catch (e) {}
+					}
+					// On (hard) refresh: if the bundle kept the JWT under another key,
+					// re-assert it on "token".
+					(function refreshHydrate() {
+						var existing = localStorage.getItem('token');
+						if (!looksLikeJwt(existing)) {
+							var keys = [];
+							for (var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+							for (var k = 0; k < keys.length; k++) {
+								if (keys[k] === 'token') continue;
+								var v = null;
+								try { v = localStorage.getItem(keys[k]); } catch (e) {}
+								if (looksLikeJwt(v)) { mirror(v); break; }
+							}
+						}
+					})();
+					// Intercept writes: any key set to a JWT is mirrored to "token",
+					// and any write to tokenHeader is normalized to 'Bearer ' (with space).
+					var origSet = localStorage.setItem;
+					var origGet = localStorage.getItem;
+					localStorage.setItem = function(key, value) {
+						if (key === 'tokenHeader') value = 'Bearer ';
+						origSet.call(this, key, value);
+						if (looksLikeJwt(value)) { mirror(value); }
+					};
+					localStorage.getItem = function(key) {
+						if (key === 'tokenHeader') return 'Bearer ';
+						return origGet.call(this, key);
+					};
+				})();
+
+				// --- wrap fetch ---
+				var origFetch = window.fetch;
+				window.fetch = function(input, init) {
+					var url = (typeof input === 'string') ? input : (input && input.url ? input.url : '');
+					if (url.indexOf('/api/') === 0) {
+						init = init ? Object.assign({}, init) : {};
+						init.credentials = init.credentials || 'same-origin';
+						var headers = new Headers(init.headers || {});
+						if (!headers.has('Authorization') && authToken()) {
+							headers.set('Authorization', authToken());
+						}
+						init.headers = headers;
+						var args = [input, init];
+
+						var retried401 = false;
+						var ctx = this;
+						return origFetch.apply(ctx, args).then(function(resp) {
+							if (resp && resp.status === 401 && !retried401) {
+								// Token may be stale in the in-flight capture; re-read and retry once.
+								var fresh = authToken();
+								retried401 = true;
+								if (fresh) {
+									headers.set('Authorization', fresh);
+									return origFetch.apply(ctx, [input, init]);
+								}
+							}
+							return resp;
+						});
+					}
+					return origFetch.apply(this, arguments);
+				};
+
+				// --- wrap XHR (some legacy calls use XMLHttpRequest open/send) ---
+				var origOpen = XMLHttpRequest.prototype.open;
+				XMLHttpRequest.prototype.open = function(method, url) {
+					this.__dshUrl = (typeof url === 'string') ? url : '';
+					return origOpen.apply(this, arguments);
+				};
+				var origSend = XMLHttpRequest.prototype.send;
+				XMLHttpRequest.prototype.send = function() {
+					if (this.__dshUrl && this.__dshUrl.indexOf('/api/') === 0) {
+						var h = authToken();
+						if (h) {
+							try { this.setRequestHeader('Authorization', h); } catch (e) {}
+						}
+					}
+					return origSend.apply(this, arguments);
+				};
+			})();
 
 			var s = document.createElement('script');
 			s.type = 'module';

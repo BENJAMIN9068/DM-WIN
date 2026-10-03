@@ -18,6 +18,7 @@ import {
   handleAdminAudit,
   handleAdminGateways,
   verifyAdminAuth,
+  setWalletStore,
   logAudit,
   getUnifiedLiveResultForIssue,
   getGameConfigByTypeId
@@ -25,6 +26,30 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Minimal, dependency-free .env loader so `node serve.mjs` works locally without
+// exporting every variable by hand. Existing process.env values always win.
+(function loadDotEnv() {
+  const envPath = path.join(__dirname, '.env');
+  if (!fs.existsSync(envPath)) return;
+  try {
+    const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line || line.startsWith('#')) continue;
+      const eq = line.indexOf('=');
+      if (eq <= 0) continue;
+      const key = line.slice(0, eq).trim();
+      let value = line.slice(eq + 1).trim();
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      if (key && process.env[key] === undefined) process.env[key] = value;
+    }
+  } catch (e) {
+    console.warn('[ENV] Could not read .env:', e.message);
+  }
+})();
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'archived_site');
@@ -34,6 +59,12 @@ const ALL_GAMES_FILE = path.join(__dirname, 'all_games_dmfirst1.json');
 const SLOTS_CHILD_FILE = path.join(__dirname, 'slots_with_child_dmfirst1.json');
 const VIDEO_CHILD_FILE = path.join(__dirname, 'video_with_child_dmfirst1.json');
 const CATEGORIES_FILE = path.join(__dirname, 'game_categories_dmfirst1.json');
+
+// Soft cap on a single /api/game-wallet balance-sync (the provider iframes report
+// an absolute balance, so a one-shot mint must be bounded; see B3/wallet sync).
+// Wins above this in a single sync are clamped — a real anti-fraud model needs
+// provider-signed result webhooks, which these white-label iframes don't expose.
+const MAX_WALLET_SYNC_INCREASE = 100000;
 
 const OFFICIAL_ALL_GAMES = fs.existsSync(ALL_GAMES_FILE) ? JSON.parse(fs.readFileSync(ALL_GAMES_FILE, 'utf-8')) : null;
 const OFFICIAL_SLOTS_CHILD = fs.existsSync(SLOTS_CHILD_FILE) ? JSON.parse(fs.readFileSync(SLOTS_CHILD_FILE, 'utf-8')) : null;
@@ -78,7 +109,8 @@ function saveUsers() {
       .map(({ _id, ...user }) => ({
         updateOne: { filter: { userId: user.userId }, update: { $set: user }, upsert: true }
       }));
-    if (operations.length) MongoUser.bulkWrite(operations, { ordered: false }).catch(() => {});
+    if (operations.length) MongoUser.bulkWrite(operations, { ordered: false })
+      .catch(err => console.error('[DB] saveUsers bulkWrite failed:', err.message));
   }
 }
 
@@ -92,8 +124,82 @@ function saveBets() {
       .map(({ _id, ...bet }) => ({
         updateOne: { filter: { orderNumber: bet.orderNumber }, update: { $set: bet }, upsert: true }
       }));
-    if (operations.length) MongoBet.bulkWrite(operations, { ordered: false }).catch(() => {});
+    if (operations.length) MongoBet.bulkWrite(operations, { ordered: false })
+      .catch(err => console.error('[DB] saveBets bulkWrite failed:', err.message));
   }
+}
+
+// ── Admin wallet store (injected into admin_backend so it reads/writes the same
+// MongoDB-backed wallet the game engine serves) ─────────────────────────────────
+function findUserById(idOrNumber) {
+  if (idOrNumber === undefined || idOrNumber === null) return null;
+  const s = String(idOrNumber);
+  return Object.values(users).find(u => u && (String(u.userId) === s || String(u.number) === s)) || null;
+}
+
+async function creditUserByUserId(userId, amount) {
+  const user = findUserById(userId);
+  if (!user) return null;
+  const amt = Number(amount) || 0;
+  if (isMongoConnected && MongoUser && mongoose.connection.readyState === 1) {
+    await MongoUser.updateOne({ userId: user.userId }, { $inc: { amount: amt } });
+  }
+  user.amount = parseFloat(((user.amount || 0) + amt).toFixed(2));
+  saveUsers();
+  return user;
+}
+
+async function setUserBalance(userId, amount) {
+  const user = findUserById(userId);
+  if (!user) return null;
+  const previousBalance = user.amount || 0;
+  user.amount = +amount;
+  if (isMongoConnected && MongoUser && mongoose.connection.readyState === 1) {
+    await MongoUser.updateOne({ userId: user.userId }, { $set: { amount: user.amount } });
+  }
+  saveUsers();
+  user._previousBalance = previousBalance;
+  return user;
+}
+
+async function setUserBanned(userId, isBanned) {
+  const user = findUserById(userId);
+  if (!user) return null;
+  user.isBanned = !!isBanned;
+  if (isBanned) user.isOnline = false;
+  if (isMongoConnected && MongoUser && mongoose.connection.readyState === 1) {
+    await MongoUser.updateOne({ userId: user.userId }, { $set: { isBanned: !!isBanned, isOnline: user.isOnline } });
+  }
+  saveUsers();
+  return user;
+}
+
+function persistRecharge(rec) {
+  if (isMongoConnected && MongoRecharge && mongoose.connection.readyState === 1) {
+    return MongoRecharge.updateOne({ id: rec.id }, { $set: rec }, { upsert: true });
+  }
+  return Promise.resolve();
+}
+
+setWalletStore({
+  getUsersMap: () => users,
+  findUser: findUserById,
+  creditUserByUserId,
+  setUserBalance,
+  setUserBanned,
+  persistRecharge
+});
+
+// Confine a URL-decoded path inside PUBLIC_DIR. `path.join` alone escapes on
+// Windows when the request path contains `..%5c` (backslash), because WHATWG URL
+// normalisation strips `/..` segments but leaves `%5c` for decodeURI to turn into
+// a separator. Resolving and re-checking the prefix closes that hole.
+function safeStaticPath(reqPath) {
+  const resolved = path.resolve(PUBLIC_DIR, '.' + reqPath);
+  if (resolved !== PUBLIC_DIR && !resolved.startsWith(PUBLIC_DIR + path.sep)) {
+    return null;
+  }
+  return resolved;
 }
 
 async function connectDatabase() {
@@ -127,7 +233,18 @@ mongoose.connection.on('error', () => {
 });
 
 // ── Centralized Aviator Engine ────────────────────────────────────────────────
-let aviatorEngine = new AviatorServerEngine(() => users, saveUsers, () => null);
+// The 4th argument lets the engine verify a client-supplied token and derive the
+// wallet identity server-side; a client's own "userId" claim is never trusted.
+function resolveAviatorUserId(token) {
+  try {
+    const payload = jwt.verify(String(token || '').replace(/^Bearer\s+/i, ''), JWT_SECRET);
+    return String(payload.sub);
+  } catch (e) {
+    return null;
+  }
+}
+
+let aviatorEngine = new AviatorServerEngine(() => users, saveUsers, () => null, resolveAviatorUserId);
 
 // ── Deterministic result generator per issue ───────────────────────────────────
 const wingoResults = [
@@ -350,37 +467,73 @@ async function resolvePendingBets(filterIssues = null) {
     const elapsed = now - betTime;
 
     const isQueried = Array.isArray(filterIssues) && filterIssues.map(String).includes(String(bet.issueNumber));
-    // Resolve if explicitly queried, or if >= 3 seconds elapsed
+    // Resolve if explicitly queried, or if the round interval has elapsed.
     const isReady = elapsed >= Math.max(1000, Number(bet.intervalSec || 60) * 1000);
 
-    if (isReady) {
-      const gameKey = bet.gameKey || 'wingo_30s';
-      const result = resultForIssue(bet.issueNumber, gameKey);
-      const { win, profitAmount, multiplier } = evaluateBet(bet, result);
-      const winAmount = win ? profitAmount : 0;
+    if (!isReady) continue;
 
-      bet.state = win ? 1 : 2; // 1 = win, 2 = lose
-      bet.profitAmount = win ? profitAmount : -bet.amount;
-      bet.winAmount = winAmount;
-      bet.multiplier = multiplier || 0;
-      bet.number = String(result.num);
-      bet.colour = result.colour || "";
-      bet.bs = result.bs || "";
-      bet.premium = String(result.premium || result.num);
+    // Never settle while the DB is unavailable, otherwise the credit write below
+    // would reject and we would mark a bet resolved without paying it.
+    if (!isMongoConnected || !MongoUser || mongoose.connection.readyState !== 1) continue;
 
-      // Find user to credit
-      const userPhone = bet.userNumber;
-      const user = users[userPhone];
+    const gameKey = bet.gameKey || 'wingo_30s';
+    const result = resultForIssue(bet.issueNumber, gameKey);
+    const { win, profitAmount, multiplier } = evaluateBet(bet, result);
+    const winAmount = win ? profitAmount : 0;
 
-      if (win && user && winAmount > 0) { await MongoUser.updateOne({userId: user.userId}, { $inc: { amount: winAmount } });
+    // Find user to credit. The in-memory `users` map is keyed by the login-normalized
+    // phone, but the bet was stored with the raw Mongo phone number (`user.number`)
+    // and `userId`. A format mismatch (e.g. +91 prefix, leading zeros) makes
+    // `users[bet.userNumber]` miss -> the win would be silently dropped (the
+    // "my WinGo win never credited / balance all gone" bug). So fall back to Mongo
+    // by userId (the stable, unique identifier) to guarantee the bettor is found.
+    const userPhone = bet.userNumber || bet.number || null;
+    let user = users[userPhone];
+    if ((!user || !user.userId) && bet.userId) {
+      const byId = typeof bet.userId === 'number' ? { userId: bet.userId } : { userId: bet.userId };
+      try {
+        user = await MongoUser.findOne(byId).lean();
+      } catch (e) { user = null; }
+    }
+
+    try {
+      if (win && user && winAmount > 0) {
+        // Credit FIRST, and only mark the bet resolved after the write succeeds,
+        // so a failed credit leaves the bet retryable instead of losing the win.
+        const inc = { $inc: { amount: winAmount } };
+        const byUserId = typeof user.userId === 'number'
+          ? { userId: user.userId }
+          : { userId: String(user.userId) };
+        let upd = await MongoUser.updateOne(byUserId, inc);
+        if (upd.matchedCount === 0 && user.number) {
+          upd = await MongoUser.updateOne({ number: user.number }, inc);
+        }
+        if (upd.matchedCount === 0) {
+          console.error(`[WIN PAYOUT] ⚠️ WinGo win NOT persisted to DB for user ${user.number || user.userId} (matched 0 docs). Retryable.`);
+        } else {
+          console.log(`[WIN PAYOUT] 🎉 WinGo Payout persisted to DB! User: ${user.number || user.username} | Won: ₹${winAmount} on Bet ${bet.orderNumber} (Issue ${bet.issueNumber}). matchedCount=${upd.matchedCount}.`);
+        }
         const oldBal = user.amount;
-        user.amount = parseFloat((user.amount + winAmount).toFixed(2));
+        user.amount = parseFloat((Number(user.amount || 0) + Number(winAmount)).toFixed(2));
         console.log(`[WIN PAYOUT] 🎉 WinGo Payout Credited! User: ${user.number || user.username} | Won: ₹${winAmount} on Bet ${bet.orderNumber} (Issue ${bet.issueNumber}, Select: ${bet.selectType}, Outcome: ${bet.number} ${bet.colour}). Old Balance: ₹${oldBal} -> New Balance: ₹${user.amount}`);
       } else if (!win && user) {
         console.log(`[BET LOSS] Bet ${bet.orderNumber} (Issue ${bet.issueNumber}) lost. Select: ${bet.selectType} vs Result: ${result.num} (${result.colour}).`);
       }
-      resolvedAny = true;
+    } catch (err) {
+      // Leave state === 0 so the payout is retried on a later tick.
+      console.error(`[RESOLVER] Failed to settle bet ${bet.orderNumber}:`, err.message);
+      continue;
     }
+
+    bet.state = win ? 1 : 2; // 1 = win, 2 = lose
+    bet.profitAmount = win ? profitAmount : -bet.amount;
+    bet.winAmount = winAmount;
+    bet.multiplier = multiplier || 0;
+    bet.number = String(result.num);
+    bet.colour = result.colour || "";
+    bet.bs = result.bs || "";
+    bet.premium = String(result.premium || result.num);
+    resolvedAny = true;
   }
 
   if (resolvedAny) {
@@ -389,9 +542,11 @@ async function resolvePendingBets(filterIssues = null) {
   }
 }
 
-// Background auto-resolver to credit winnings every 1 second
+// Background auto-resolver to credit winnings every 1 second. `await` the call
+// inside an async function so a rejection cannot escape the interval as an
+// unhandled rejection (which crashes Node on modern versions).
 setInterval(() => {
-  try { resolvePendingBets(); } catch(e) {}
+  resolvePendingBets().catch(err => console.error('[RESOLVER]', err.message));
 }, 1000);
 
 function normalizeNumber(raw) {
@@ -549,8 +704,8 @@ async function handleRequest(req, res) {
 
   // 0.05 Serve Uploads Directory (Receipts, Gateway QR codes, etc.)
   if (reqPath.startsWith('/uploads/')) {
-    const uploadFilePath = path.join(PUBLIC_DIR, reqPath);
-    if (fs.existsSync(uploadFilePath) && fs.statSync(uploadFilePath).isFile()) {
+    const uploadFilePath = safeStaticPath(reqPath);
+    if (uploadFilePath && fs.existsSync(uploadFilePath) && fs.statSync(uploadFilePath).isFile()) {
       const ext = path.extname(uploadFilePath).toLowerCase();
       const ct = MIME_TYPES[ext] || 'application/octet-stream';
       res.writeHead(200, { 'Content-Type': ct, 'Access-Control-Allow-Origin': '*' });
@@ -561,8 +716,8 @@ async function handleRequest(req, res) {
 
   // 0.1 Serve Admin Static Files at /admin/
   if (reqPath.startsWith('/admin/')) {
-    const adminFilePath = path.join(PUBLIC_DIR, reqPath);
-    if (fs.existsSync(adminFilePath) && fs.statSync(adminFilePath).isFile()) {
+    const adminFilePath = safeStaticPath(reqPath);
+    if (adminFilePath && fs.existsSync(adminFilePath) && fs.statSync(adminFilePath).isFile()) {
       const ext = path.extname(adminFilePath).toLowerCase();
       const ct = MIME_TYPES[ext] || 'application/octet-stream';
       res.writeHead(200, { 'Content-Type': ct, 'Access-Control-Allow-Origin': '*' });
@@ -573,10 +728,9 @@ async function handleRequest(req, res) {
 
   // 0.1 Admin API Endpoints
   if (reqPath.startsWith('/api/admin/')) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', '*');
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    // Same-origin admin console; do NOT open admin APIs to every origin.
+    setCorsHeaders(req, res);
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
@@ -587,9 +741,15 @@ async function handleRequest(req, res) {
     const endpoint = reqPath.split('?')[0];
     const body = await getRequestBody(req);
 
-    // Auth endpoints
+    // Auth endpoints (login / logout). handleAdminAuth returns null when the
+    // method is not supported; answer 405 instead of dereferencing null.
     if (endpoint === '/api/admin/login' || endpoint === '/api/admin/logout') {
-      const authRes = await handleAdminAuth(endpoint, req.method, body);
+      const authRes = await handleAdminAuth(endpoint, req.method, body, req);
+      if (!authRes) {
+        res.writeHead(405, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ code: 405, result: false, msg: 'Method not allowed' }));
+        return;
+      }
       res.writeHead(authRes.code === 0 ? 200 : authRes.code);
       res.end(JSON.stringify(authRes));
       return;
@@ -604,7 +764,7 @@ async function handleRequest(req, res) {
 
     // Current Admin Info
     if (endpoint === '/api/admin/me') {
-      const authRes = await handleAdminAuth(endpoint, req.method, body);
+      const authRes = await handleAdminAuth(endpoint, req.method, body, req);
       res.writeHead(200);
       res.end(JSON.stringify(authRes));
       return;
@@ -754,7 +914,7 @@ async function handleRequest(req, res) {
 
   // ── Game Wallet Balance Sync API (before generic /api/ handler) ──────────────
   if (reqPath === '/api/game-wallet') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    setCorsHeaders(req, res);
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     const user = getActiveUser(req, true);
     if (!user) {
@@ -764,18 +924,40 @@ async function handleRequest(req, res) {
     }
     if (req.method === 'POST') {
       const body = await getRequestBody(req);
-      if (typeof body.balance === 'number') {
-        const oldBal = (typeof user.amount === 'number') ? user.amount : 0.00;
-        const ignoredClientBalance = body.balance;
-        saveUsers();
-        console.log(`[wallet] ₹${oldBal} → ₹${user.amount} (game: ${body.slug || 'unknown'})`);
-        res.end(JSON.stringify({ code: 0, result: true, balance: user.amount }));
-      } else {
+      const reported = parseFloat(body.balance);
+      // Validate: must be a finite, non-negative balance reported by the game iframe.
+      if (!Number.isFinite(reported) || reported < 0) {
         res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ code: 1, result: false, msg: 'Invalid balance' }));
+        return;
       }
+      const current = (typeof user.amount === 'number' && Number.isFinite(user.amount)) ? user.amount : 0.00;
+      let delta = reported - current;
+
+      // Apply the game's win/loss delta:
+      //  - positive delta (a win) is capped per-sync to bound one-shot minting;
+      //  - negative delta (a bet loss syncing back down) is honored but the
+      //    wallet never goes below 0.
+      if (delta > MAX_WALLET_SYNC_INCREASE) {
+        console.warn(`[wallet] Clamped win from ₹${delta} to ₹${MAX_WALLET_SYNC_INCREASE} (game: ${body.slug || 'unknown'}, userId ${user.userId})`);
+        delta = MAX_WALLET_SYNC_INCREASE;
+      } else if (delta < -current) {
+        delta = -current; // floor at 0
+      }
+
+      const oldBal = current;
+      if (delta !== 0) {
+        user.amount = parseFloat((current + delta).toFixed(2));
+        if (MongoUser && isMongoConnected && mongoose.connection.readyState === 1) {
+          MongoUser.updateOne({ userId: user.userId }, { $set: { amount: user.amount } }).catch(err =>
+            console.error(`[wallet] persist failed for userId ${user.userId}:`, err.message));
+        }
+        saveUsers();
+      }
+      console.log(`[wallet] ₹${oldBal} → ₹${user.amount} (game: ${body.slug || 'unknown'}, userId ${user.userId})`);
+      res.end(JSON.stringify({ code: 0, result: true, balance: user.amount }));
     } else {
-      const currentBal = (typeof user.amount === 'number') ? user.amount : 0.00;
+      const currentBal = (typeof user.amount === 'number' && Number.isFinite(user.amount)) ? user.amount : 0.00;
       res.end(JSON.stringify({ code: 0, result: true, balance: currentBal }));
     }
     return;
@@ -1775,15 +1957,34 @@ async function handleRequest(req, res) {
     if (endpoint.includes('GameTransferOrBet')) {
       const user = getActiveUser(req, true);
       const delta = parseFloat(body.amount || 0);
-      if (user && !isNaN(delta)) {
-        await MongoUser.updateOne({userId: user.userId}, { $inc: { amount: delta } }); user.amount += delta;
-        saveUsers();
+
+      // The wallet delta must come from server-side state, never from a client
+      // number. Accept a positive credit only when it references a bet this user
+      // actually placed (orderNumber present, still pending) and the amount is the
+      // bet's own payout; otherwise a player could mint any balance they like.
+      let applied = false;
+      if (user && Number.isFinite(delta)) {
+        const orderNumber = String(body.orderNumber || body.orderNo || '');
+        const pendingBet = orderNumber
+          ? betStore.find(b => b.orderNumber === orderNumber && String(b.userId) === String(user.userId) && b.state === 0)
+          : null;
+
+        if (pendingBet && delta > 0) {
+          await MongoUser.updateOne({ userId: user.userId }, { $inc: { amount: delta } });
+          user.amount = parseFloat((user.amount + delta).toFixed(2));
+          saveUsers();
+          applied = true;
+          console.log(`[GameTransferOrBet] Credited ₹${delta} for order ${orderNumber} (userId ${user.userId})`);
+        } else {
+          console.warn(`[GameTransferOrBet] REJECTED raw delta ₹${delta} (order "${orderNumber}") for userId ${user.userId}: no matching pending bet.`);
+        }
       }
+
       const bal = (user && typeof user.amount === 'number') ? user.amount : 0.00;
       res.end(JSON.stringify({
         code: 0,
         result: true,
-        msg: "success",
+        msg: applied ? 'success' : 'No matching pending bet; amount not applied',
         data: { balance: bal, amount: bal }
       }));
       return;
@@ -1791,7 +1992,7 @@ async function handleRequest(req, res) {
 
     // GetBalance / GetAllwallets / GetARGameAndPlatWallets / GetBalanceByARGame
     if (endpoint.includes('GetBalance') || endpoint.includes('GetAllwallets') || endpoint.includes('GetSaasAllwallets') || endpoint.includes('GetARGameAndPlatWallets') || endpoint.includes('GetBalanceByARGame') || endpoint.includes('NotifyARGameRecover') || endpoint.includes('Transfer')) {
-      resolvePendingBets();
+      await resolvePendingBets();
       const user = getActiveUser(req) || { amount: 0.00 };
       const bal = (typeof user.amount === 'number') ? user.amount : 0.00;
       res.end(JSON.stringify({
@@ -2053,9 +2254,19 @@ async function handleRequest(req, res) {
 
     // My Personal Bets / Bet History — returns real stored bets
     if (endpoint.includes('GetMyEmerdList') || endpoint.includes('GetMy5DEmerdList') || endpoint.includes('GetMyK3EmerdList') || endpoint.includes('GetTRXMyEmerdList') || endpoint.includes('WinTxrGetTRXMyEmerdList') || endpoint.includes('GetMy4DHistoryBetting') || endpoint.includes('GetNewMyEmerdList')) {
-      resolvePendingBets();
-      // Return most recent 20 bets newest first
-      const myBets = [...betStore].reverse().slice(0, 20).map(bet => ({
+      await resolvePendingBets();
+      const me = getActiveUser(req, true);
+      if (!me) {
+        res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ code: 4, result: false, msg: 'Authentication required', msgCode: 4 }));
+        return;
+      }
+      // Scope to THIS user only (the previous code returned every player's bets).
+      const myBets = betStore
+        .filter(b => b.userNumber === me.number || String(b.userId) === String(me.userId))
+        .slice(-20)
+        .reverse()
+        .map(bet => ({
         selectType: bet.selectType,
         issueNumber: bet.issueNumber,
         addTime: bet.addTime,
@@ -2140,13 +2351,18 @@ async function handleRequest(req, res) {
       const seq = Math.floor(totalSeconds / intervalSec) + 1;
       
       const history = [];
-      const pageSize = parseInt(body.pageSize || parsedUrl.searchParams.get('pageSize') || 10);
-      const pageNo = parseInt(body.pageNo || parsedUrl.searchParams.get('pageNo') || 1);
+      // Clamp both paging parameters so a negative pageNo can no longer point the
+      // loop at future issues (which would leak the deterministic result that
+      // settlement later uses).
+      const pageSize = Math.min(50, Math.max(1, parseInt(body.pageSize || parsedUrl.searchParams.get('pageSize') || 10) || 10));
+      const pageNo = Math.max(1, parseInt(body.pageNo || parsedUrl.searchParams.get('pageNo') || 1) || 1);
       const offset = (pageNo - 1) * pageSize;
 
       for (let i = 1; i <= pageSize; i++) {
         const targetSeq = seq - offset - i;
         if (targetSeq < 1) break;
+        // Never emit a round that has not ended yet.
+        if (targetSeq >= seq) continue;
         const targetIssue = `${dateStr}${String(targetSeq).padStart(4, '0')}`;
         const liveRes = getUnifiedLiveResultForIssue(cfg?.key || typeId, targetIssue);
         const resStr = String(liveRes.result);
@@ -2310,8 +2526,13 @@ async function handleRequest(req, res) {
     // Lottery User Records / History Page
     if (endpoint.includes('GetRecordPage') || endpoint.includes('GetMyHistoryBet') || endpoint.includes('GetPageListUserBet')) {
       const user = getActiveUser(req, true);
-      const userPhone = user ? (user.number || null) : '';
-      const list = betStore.filter(b => !userPhone || b.userNumber === userPhone || b.userId === user?.userId).slice(-20).reverse();
+      if (!user) {
+        res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ code: 4, result: false, msg: 'Authentication required', msgCode: 4 }));
+        return;
+      }
+      const userPhone = user.number || null;
+      const list = betStore.filter(b => b.userNumber === userPhone || String(b.userId) === String(user.userId)).slice(-20).reverse();
       res.end(JSON.stringify({
         code: 0,
         result: true,
@@ -2438,7 +2659,11 @@ async function handleRequest(req, res) {
       const totalSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
       const issueSeq = Math.floor(totalSeconds / intervalSec) + 1;
       
-      const issueNumber = String(body.issuenumber || body.issueNumber || body.issue_number || `${dateStr}${String(issueSeq).padStart(4, '0')}`);
+      // Bind the bet to the SERVER's current round. A client-supplied issueNumber
+      // would let a player attach a bet to a round whose outcome they already know
+      // (past results are public, and future ones are deterministic), so it is
+      // ignored here.
+      const issueNumber = `${dateStr}${String(issueSeq).padStart(4, '0')}`;
       const rawSelect = body.selecttype !== undefined ? body.selecttype : (body.selectType !== undefined ? body.selectType : (body.betCode !== undefined ? body.betCode : '11'));
       const selectType = String(rawSelect);
       const orderNumber = "ORD" + Date.now() + Math.floor(Math.random() * 1000);
@@ -2470,8 +2695,13 @@ async function handleRequest(req, res) {
         winAmount: 0,
         intervalSec
       });
-      // Keep only last 200 bets to avoid unbounded growth
-      if (betStore.length > 200) betStore = betStore.slice(-200);
+      // Keep the store bounded WITHOUT dropping unresolved bets — their stake has
+      // already been taken and they must still settle (or be refunded) later.
+      if (betStore.length > 200) {
+        const pending = betStore.filter(b => b.state === 0);
+        const resolved = betStore.filter(b => b.state !== 0).slice(-Math.max(0, 200 - pending.length));
+        betStore = pending.concat(resolved);
+      }
       saveBets();
 
       console.log(`[BET PLACED] Order: ${orderNumber} | User: ${userPhone} | Issue: ${issueNumber} | Bet: ₹${betAmt} on Select: ${selectType} | Game: ${cfg?.key || 'wingo_1m'} | Remaining Balance: ₹${user.amount}`);
@@ -2892,6 +3122,19 @@ async function handleRequest(req, res) {
       } catch (e) {}
     }
 
+    // Money mutation endpoints that are NOT implemented must never report success.
+    // A success mock here would tell the player their withdrawal went through while
+    // nothing was debited or recorded.
+    if (endpoint.includes('Withdrawal') || endpoint.includes('SetWithdraw') || endpoint.includes('Withdraw')) {
+      res.end(JSON.stringify({
+        code: 1,
+        result: false,
+        msg: 'Withdrawal is not available on this server.',
+        data: null
+      }));
+      return;
+    }
+
     // Default universal success mock for all other APIs
     res.end(JSON.stringify({
       code: 0,
@@ -2908,7 +3151,12 @@ async function handleRequest(req, res) {
 
   // 3. Static File Serving with Game Asset Resolution & SPA routing
   if (reqPath === '/') reqPath = '/index.html';
-  let filePath = path.join(PUBLIC_DIR, reqPath);
+  let filePath = safeStaticPath(reqPath);
+  if (!filePath) {
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('404 Not Found');
+    return;
+  }
 
   // Check if request is from a game via Referer header
   const referer = req.headers.referer || '';
@@ -2921,11 +3169,11 @@ async function handleRequest(req, res) {
   // Handle /static/ requests (from chicken-road, chicken-road-2, etc.)
   if (reqPath.startsWith('/static/')) {
     const candidates = [];
-    if (refererSlug) candidates.push(path.join(PUBLIC_DIR, 'games', refererSlug, reqPath));
-    candidates.push(path.join(PUBLIC_DIR, 'games', 'chicken-road-2', reqPath));
-    candidates.push(path.join(PUBLIC_DIR, 'games', 'chicken-road', reqPath));
+    if (refererSlug) candidates.push(safeStaticPath('/games/' + refererSlug + reqPath));
+    candidates.push(safeStaticPath('/games/chicken-road-2' + reqPath));
+    candidates.push(safeStaticPath('/games/chicken-road' + reqPath));
     for (const cand of candidates) {
-      if (fs.existsSync(cand)) {
+      if (cand && fs.existsSync(cand)) {
         filePath = cand;
         break;
       }
@@ -2933,9 +3181,9 @@ async function handleRequest(req, res) {
   }
 
   // If file doesn't exist at root, check if referer points to a game directory
-  if (!fs.existsSync(filePath) && refererSlug) {
-    const gameCandidate = path.join(PUBLIC_DIR, 'games', refererSlug, reqPath);
-    if (fs.existsSync(gameCandidate)) {
+  if (refererSlug) {
+    const gameCandidate = safeStaticPath('/games/' + refererSlug + reqPath);
+    if (gameCandidate && fs.existsSync(gameCandidate) && !fs.existsSync(filePath)) {
       filePath = gameCandidate;
     }
   }
@@ -3013,9 +3261,35 @@ async function handleRequest(req, res) {
 // ── Centralized Aviator WebSocket Server ──────────────────────────────────────
 const wss = new WebSocketServer({ server, path: '/aviator-ws' });
 
+// 30s heartbeat: terminate sockets that miss a pong so dead connections cannot
+// accumulate in the client set and broadcast buffers.
+const heartbeat = setInterval(() => {
+  for (const ws of wss.clients) {
+    if (ws.isAlive === false) {
+      ws.terminate();
+      aviatorEngine.clients.delete(ws);
+      continue;
+    }
+    ws.isAlive = false;
+    try { ws.ping(); } catch (e) {}
+  }
+}, 30000);
+wss.on('close', () => clearInterval(heartbeat));
+
 wss.on('connection', (ws, req) => {
   ws.isAlive = true;
   ws.activeBets = {};
+  ws.dmUserId = null;
+
+  // Bind the socket to an authenticated user when a token is supplied. The token
+  // may arrive in the query string or the first login message (the engine also
+  // verifies the message token itself).
+  try {
+    const u = new URL(req.url, 'http://localhost');
+    const token = u.searchParams.get('token') || u.searchParams.get('auth_token');
+    if (token) ws.dmUserId = resolveAviatorUserId(token);
+  } catch (e) {}
+
   aviatorEngine.clients.add(ws);
 
   ws.on('pong', () => { ws.isAlive = true; });
