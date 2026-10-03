@@ -1002,6 +1002,18 @@ async function handleRequest(req, res) {
         res.writeHead(200, { 'Content-Type': ct, 'Access-Control-Allow-Origin': '*' });
         fs.createReadStream(gFilePath).pipe(res);
       } else {
+        // A missing *asset* (chunk, wasm, texture, audio…) must 404. Serving the
+        // game's index.html here made the client's chunk loader (and their
+        // asset-retry plugin) parse HTML as JavaScript — "Unexpected token '<'"
+        // → ChunkLoadError → endless reload / a loading screen that never ends.
+        const ext = path.extname(gFilePath).toLowerCase();
+        if (['.js', '.mjs', '.css', '.json', '.wasm', '.br', '.data', '.png', '.jpg', '.jpeg', '.svg',
+             '.webp', '.ktx2', '.basis', '.bytes', '.skel', '.ttf', '.woff', '.woff2', '.mp3',
+             '.wav', '.ogg', '.webm', '.m4a', '.map'].includes(ext)) {
+          res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+          res.end(`404 Not Found: ${reqPath}`);
+          return;
+        }
         // SPA fallback → serve game index.html
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         fs.createReadStream(path.join(GAMES_DIR, 'index.html')).pipe(res);
@@ -1189,13 +1201,13 @@ async function handleRequest(req, res) {
       amount: numAmt,
       utrNumber: cleanUtr,
       screenshotUrl,
-      status: 'Approved', // Auto-approved on this deployment: the wallet is
-                          // credited immediately so the player's balance reflects
-                          // the recharge without a manual admin step.
+      status: 'Pending', // Strictly controlled server-side: the wallet is only
+                          // credited when an admin accepts the recharge via
+                          // POST /api/admin/recharges/action (action: 'Accept').
       token: token || '',
       session: session || '',
       createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      processedAt: new Date().toISOString().replace('T', ' ').slice(0, 19)
+      processedAt: null
     };
 
     recharges.unshift(newRec);
@@ -1207,16 +1219,12 @@ async function handleRequest(req, res) {
       MongoRecharge.updateOne({ id: newRec.id }, { $set: newRec }, { upsert: true }).catch(() => {});
     }
 
-    // Credit the player's wallet now (in-memory + MongoDB) instead of leaving the
-    // money "Pending admin verification" — this deployment auto-approves UPI
-    // recharges so the balance reflects immediately.
-    const creditedUser = await creditUserByUserId(authUser.userId, numAmt);
-    console.log(`[RECHARGE] ${newRec.id} APPROVED + CREDITED: UID ${newRec.userId} | UTR ${newRec.utrNumber} | Amount ₹${newRec.amount} | New balance ₹${creditedUser ? creditedUser.amount : 'n/a'}`);
+    console.log(`[RECHARGE] ${newRec.id} PENDING admin verification: UID ${newRec.userId} | UTR ${newRec.utrNumber} | Amount ₹${newRec.amount}`);
 
     res.end(JSON.stringify({
       code: 0,
       result: true,
-      msg: 'Recharge approved & credited to your wallet!',
+      msg: 'Recharge request submitted successfully! Pending admin verification.',
       data: newRec
     }));
     return;
