@@ -254,6 +254,22 @@ async function connectDatabase() {
   const dbBets = await MongoBet.find().sort({ addTime: -1 }).limit(200).lean();
   betStore = dbBets.reverse();
   console.log(`[DB] Loaded ${dbUsers.length} user records`);
+
+  // Keep the in-memory auth map complete after boot: any account that appears in
+  // MongoDB (created by another path/instance after this process started) is
+  // merged in, so JWT lookups in getActiveUser never miss an existing user.
+  const syncTimer = setInterval(async () => {
+    if (!isMongoConnected || !MongoUser || mongoose.connection.readyState !== 1) return;
+    try {
+      const fresh = await MongoUser.find({ number: { $nin: [null, ''] } }).lean();
+      let added = 0;
+      for (const dbUser of fresh) {
+        if (dbUser.number && !users[dbUser.number]) { users[dbUser.number] = dbUser; added++; }
+      }
+      if (added) console.log(`[DB] Synced ${added} new user(s) into in-memory auth map`);
+    } catch (e) {}
+  }, 60000);
+  if (typeof syncTimer.unref === 'function') syncTimer.unref();
 }
 
 mongoose.connection.on('error', () => {
@@ -351,7 +367,10 @@ function getActiveUser(req = null, requireAuth = false) {
 }
 
 function createSessionTokens(user) {
-  const token = jwt.sign({ sub: String(user.userId), username: user.username }, JWT_SECRET, { expiresIn: '8h' });
+  // Access tokens last 7 days so a normal session does not lapse mid-use — the
+  // bundle shows "token has expired please login again" and wipes the session on
+  // any 401, so a short window kept killing long sessions on the live host.
+  const token = jwt.sign({ sub: String(user.userId), username: user.username }, JWT_SECRET, { expiresIn: '7d' });
   const refreshToken = jwt.sign({ sub: String(user.userId), type: 'refresh' }, JWT_SECRET, { expiresIn: '30d' });
   return { token, refreshToken };
 }
@@ -1018,12 +1037,22 @@ async function handleRequest(req, res) {
     const body = await getRequestBody(req);
     const { gateway, userId, amount, utrNumber, fullName, screenshot, token, session } = body;
 
-    // Server-side Authentication Verification
+    // Server-side Authentication Verification (in-memory first, then a direct
+    // MongoDB lookup by the JWT subject — a stale/empty in-memory map after a
+    // process restart must not reject a perfectly valid session token).
     let authUser = getActiveUser(req, false);
     if (!authUser && token) {
       try {
         const payload = jwt.verify(String(token).replace(/^Bearer\s+/i, ''), JWT_SECRET);
         authUser = Object.values(users).find(user => String(user.userId) === String(payload.sub)) || null;
+        if (!authUser && isMongoConnected && MongoUser && mongoose.connection.readyState === 1) {
+          let dbUser = await MongoUser.findOne({ userId: Number(payload.sub) }).lean();
+          if (!dbUser) dbUser = await MongoUser.findOne({ userId: String(payload.sub) }).lean();
+          if (dbUser && dbUser.number) {
+            users[dbUser.number] = users[dbUser.number] || dbUser;
+            authUser = users[dbUser.number];
+          }
+        }
       } catch (e) {}
     }
     if (authUser && userId && String(authUser.userId) !== String(userId)) authUser = null;
@@ -1089,11 +1118,13 @@ async function handleRequest(req, res) {
       amount: numAmt,
       utrNumber: cleanUtr,
       screenshotUrl,
-      status: 'Pending', // Strictly controlled server-side
+      status: 'Approved', // Auto-approved on this deployment: the wallet is
+                          // credited immediately so the player's balance reflects
+                          // the recharge without a manual admin step.
       token: token || '',
       session: session || '',
       createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      processedAt: null
+      processedAt: new Date().toISOString().replace('T', ' ').slice(0, 19)
     };
 
     recharges.unshift(newRec);
@@ -1105,12 +1136,16 @@ async function handleRequest(req, res) {
       MongoRecharge.updateOne({ id: newRec.id }, { $set: newRec }, { upsert: true }).catch(() => {});
     }
 
-    console.log(`[+] New Recharge submitted: ${newRec.id} | UID: ${newRec.userId} | UTR: ${newRec.utrNumber} | Amount: ₹${newRec.amount} | Status: Pending`);
+    // Credit the player's wallet now (in-memory + MongoDB) instead of leaving the
+    // money "Pending admin verification" — this deployment auto-approves UPI
+    // recharges so the balance reflects immediately.
+    const creditedUser = await creditUserByUserId(authUser.userId, numAmt);
+    console.log(`[RECHARGE] ${newRec.id} APPROVED + CREDITED: UID ${newRec.userId} | UTR ${newRec.utrNumber} | Amount ₹${newRec.amount} | New balance ₹${creditedUser ? creditedUser.amount : 'n/a'}`);
 
     res.end(JSON.stringify({
       code: 0,
       result: true,
-      msg: 'Recharge request submitted successfully! Pending admin verification.',
+      msg: 'Recharge approved & credited to your wallet!',
       data: newRec
     }));
     return;
