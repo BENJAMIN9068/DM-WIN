@@ -7,8 +7,12 @@
 
   function readToken() {
     try {
-      return localStorage.getItem('token') || localStorage.getItem('userToken') ||
-             localStorage.getItem('accessToken') || '';
+      const stored = localStorage.getItem('token') || localStorage.getItem('userToken') ||
+             localStorage.getItem('accessToken');
+      if (stored) return stored;
+      // The platform appends its session token to the game URL.
+      const q = new URLSearchParams(window.location.search);
+      return q.get('token') || q.get('auth_token') || q.get('authToken') || '';
     } catch (e) { return ''; }
   }
 
@@ -208,11 +212,13 @@
         const uParams = new URLSearchParams(window.location.search);
         const userId = uParams.get('user') || '';
         // The server derives the wallet identity from a verifiable session token,
-        // never from the userId query param. Read the same token the main app stores.
+        // never from the userId query param. Read the same token the main app
+        // stores, falling back to the token the game was opened with.
         let token = null;
         try {
           token = localStorage.getItem('token') || localStorage.getItem('userToken') || null;
         } catch (e) { token = null; }
+        if (!token) token = uParams.get('token') || uParams.get('auth_token') || uParams.get('authToken') || null;
         console.log('[*] Sending LoginRequest to centralized server (authenticated)');
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           this.ws.send(JSON.stringify({
