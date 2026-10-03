@@ -1,0 +1,14 @@
+{
+  "name": "DM WIN Predictor",
+  "short_name": "DM Win",
+  "description": "DM WIN Predictor — real-time game predictions for Win Go, K3 Lotre, 5D Lotre, TRX Win Go and Aviator Crash.",
+  "start_url": "/black-og-hack/?source=pwa",
+  "display": "standalone",
+  "background_color": "#0f1424",
+  "theme_color": "#0f1424",
+  "display_override": ["window-controls", "standalone", "minimal-ui"],
+  "icons": [
+    { "src": "/black-og-hack/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable any" },
+    { "src": "/black-og-hack/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable any" }
+  ]
+}

@@ -1113,6 +1113,34 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // ── DM WIN Predictor PWA at /black-og-hack ──────────────────────────────────────
+  const PREDICTOR_DIR = path.join(__dirname, 'archived_site', 'black-og-hack');
+  const predictorMatch = reqPath.match(/^\/black-og-hack(\/.*)?$/);
+  if (predictorMatch) {
+    const rel = (predictorMatch[1] || '/index.html').replace(/\/$/, '/index.html');
+    const pFilePath = path.join(PREDICTOR_DIR, rel);
+    let filePath = pFilePath;
+    if (!fs.existsSync(filePath) && fs.existsSync(filePath + '.html')) filePath = filePath + '.html';
+    // SPA fallback for the shell; asset requests for missing files must 404.
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      const ext = path.extname(filePath).toLowerCase();
+      const ct = MIME_TYPES[ext] || 'application/octet-stream';
+      const headers = { 'Content-Type': ct, 'Cache-Control': (ext === '.html' || ext === '.js') ? 'no-store, must-revalidate' : 'public, max-age=3600', 'Referrer-Policy': 'no-referrer' };
+      res.writeHead(200, headers);
+      fs.createReadStream(filePath).pipe(res);
+    } else {
+      const ext = path.extname(rel).toLowerCase();
+      if (ext && ['.js', '.mjs', '.css', '.json', '.wasm', '.png', '.jpg', '.jpeg', '.svg', '.webmanifest', '.ico'].includes(ext)) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('404 Not Found: ' + reqPath);
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, must-revalidate', 'Referrer-Policy': 'no-referrer' });
+        fs.createReadStream(path.join(PREDICTOR_DIR, 'index.html')).pipe(res);
+      }
+    }
+    return;
+  }
+
   // 1.1 Handle Web Config
   if (reqPath.startsWith('/web/config')) {
     res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
@@ -1424,8 +1452,35 @@ async function handleRequest(req, res) {
   if (reqPath.startsWith('/api/') || reqPath.startsWith('/Lottery/')) {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
-    let endpoint = reqPath.split('?')[0];
+    const endpoint = reqPath.split('?')[0];
     const body = await getRequestBody(req);
+
+    // Public predictions endpoint for the DM WIN Predictor app (route /#black-og-hack).
+    // Requires the player's JWT (same auth as the in-game wallet) but NOT admin
+    // privileges: it returns only the auto-predicted round result that the admin
+    // console's "unified" view exposes. No overrides can be set here.
+    if (endpoint === '/api/predictions' && req.method === 'GET') {
+      const user = getActiveUser(req, true);
+      if (!user) {
+        res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ code: 401, result: false, msg: 'Authentication required' }));
+        return;
+      }
+      try {
+        const predRes = await handleAdminHackBots('/api/admin/hack-bots/unified', 'GET', null, aviatorEngine);
+        if (predRes && predRes.code === 0) {
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+          res.end(JSON.stringify(predRes));
+        } else {
+          throw new Error('predictions unavailable');
+        }
+      } catch (e) {
+        console.error('[predictions] failed:', e.message);
+        res.writeHead(503, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ code: 503, result: false, msg: 'Predictions temporarily unavailable', data: null }));
+      }
+      return;
+    }
 
     // Register Endpoint: Allows new phone numbers to register with 0.00 initial balance. Rejects already registered.
     if (endpoint.includes('Register') && !endpoint.includes('RegisterState')) {
