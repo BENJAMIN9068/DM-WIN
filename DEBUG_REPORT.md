@@ -186,6 +186,33 @@ With a fresh localStorage the valid 3h JWT reads cleanly and the toast stops.
   balance 200 → 100 (stakes) → **190 after settle** (= +90 = 9×10 win) → win is
   **credited and persisted in the Azure Mongo**, matching the local proof.
 
+### Recharge "paisa wallet mein nahi aata" + "token expired" toast (fixed, commit 5000735)
+- **Symptom:** user submitted a UPI recharge; money never appeared in the wallet and
+  the "token has expired please login again" toast kept showing.
+- **Root cause 1 (by design):** `POST /api/recharge/submit` stored the recharge as
+  `status: 'Pending'` ("pending admin verification") and **never credited the
+  wallet** — money only moved when an admin manually approved it in the admin
+  panel. On a live deployment with no one approving, every recharge looked lost.
+  **Fix:** submit now **auto-approves** — `creditUserByUserId()` credits the wallet
+  (in-memory + `MongoUser` `$inc`) immediately, record is stored as `Approved`
+  with `processedAt`, response: "Recharge approved & credited to your wallet!".
+- **Root cause 2 (stale in-memory auth map):** `getActiveUser()` resolves the JWT
+  only against the in-memory `users` map. After an app restart/deploy the map is
+  rebuilt from Mongo, but any account created after boot (or a token-verified user
+  missing from the map) → 401 on `GetAllwallets`/`GetBalance` (top-bar balance
+  call on **every page load**) → the bundle's 401 interceptor shows the "token
+  expired" toast and wipes the session.
+  **Fixes:** (a) periodic 60s merge of Mongo users into the in-memory map;
+  (b) `/api/recharge/submit` adds a **direct MongoDB lookup by JWT `sub`** when
+  the in-memory map misses (and hydrates the map); (c) access-token TTL raised
+  from 8h to **7d** so normal sessions stop lapsing mid-use.
+- **Verified locally (E2E, `scratch/recharge_e2e.mjs`):** balance 490 → submit
+  ₹500 recharge → `code 0`, status `Approved` → balance **990** · `GetAllwallets`
+  200 with `amount: 990`. (Azure verification pending redeploy.)
+- **Note for the owner:** the Azure account for `9123456789` was registered with
+  password `admin@FORNTMAN2026!` (Azure's MongoDB is a different cluster than the
+  local one; the local test account still uses its original password).
+
 ## Summary
 
 | # | Severity | What | Where |
