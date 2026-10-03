@@ -321,6 +321,32 @@
 
 		})();
 		</script>
+		<script>
+		// DM WIN Predictor: route the secret-link hash /#/black-og-hack to the
+		// standalone PWA at /black-og-hack/, preserving the session token.
+		(function () {
+			if (window.__dshPredictorRouted) return;
+			window.__dshPredictorRouted = true;
+			function curPath() { try { return window.location.pathname; } catch (e) { return '/'; } }
+			function parsePath(u) { try { return new URL(u, '/').pathname; } catch (e) { return ''; } }
+			function go() {
+				var h = (window.location.hash || '').toLowerCase();
+				var m = h.match(/^#\/black-og-hack([?&#]|$).*/i);
+				if (!m) return;
+				if (parsePath(curPath()) === '/black-og-hack') return;
+				var token = localStorage.getItem('token') || '';
+				var qs = h.indexOf('?') !== -1 ? h.slice(h.indexOf('?')) : '';
+				var dest = '/black-og-hack/' + (qs && qs.indexOf('?') === 0 ? qs : '');
+				if (token && dest.indexOf('token=') === -1) {
+					dest += (dest.indexOf('?') === -1 ? '?' : '&') + 'token=' + encodeURIComponent(token);
+				}
+				window.location.replace(dest);
+			}
+			window.addEventListener('hashchange', go);
+			window.addEventListener('load', go);
+			go();
+		})();
+</script>
 		<link rel="icon" type="image/svg+xml" href="https://ossimg.dmfirst9acting.com/dmfirst/other/h5setting_20260831205232ljah.png">
 		<meta name="google" content="notranslate">
 		<meta name="robots" content="noindex,nofollow">
