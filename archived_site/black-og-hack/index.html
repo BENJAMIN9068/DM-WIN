@@ -415,8 +415,16 @@
         if (res.status === 401) { showTokenPrompt('Your session token is invalid or expired. Sign in again on the main app, then reopen this link.'); return; }
         if (!j || j.code !== 0 || !j.data) { showTokenPrompt('Predictions unavailable: ' + (j && j.msg ? j.msg : 'server error')); return; }
         state.categories = j.data.categories || [];
-        state.games = j.data.games || {};
         state.grouped = j.data.grouped || {};
+        // Keep only real game entries. The unified payload also ships a
+        // per-category summary keyed by the bare category name (wingo, k3, 5d,
+        // trx_wingo) — render only interval-bearing games + aviator to avoid
+        // duplicate cards.
+        state.games = {};
+        Object.entries(j.data.games || {}).forEach(function (kv) {
+          var k = kv[0];
+          if (k.indexOf('_') !== -1 || k === 'aviator') state.games[k] = kv[1];
+        });
         state.loadedAt = Date.now();
         // hide token prompt if present
         app.querySelectorAll('.token-box').forEach(n => n.remove());
