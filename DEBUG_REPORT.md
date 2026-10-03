@@ -186,6 +186,20 @@ With a fresh localStorage the valid 3h JWT reads cleanly and the toast stops.
   balance 200 → 100 (stakes) → **190 after settle** (= +90 = 9×10 win) → win is
   **credited and persisted in the Azure Mongo**, matching the local proof.
 
+### Recharge: auto-approve REVERTED — money moves only on admin Accept (commit c54c38d)
+- The owner wanted recharges to **stay `Pending admin verification`** (no
+  auto-approve). `POST /api/recharge/submit` was reverted: record stored as
+  `status: 'Pending'`, `processedAt: null`, **no wallet credit**, response
+  "Recharge request submitted successfully! Pending admin verification."
+- The money-in path is the admin panel: `POST /api/admin/login` →
+  `POST /api/admin/recharges/action` `{rechargeId, action:'Accept'}` →
+  `walletStore.creditUserByUserId()` credits the live wallet (in-memory +
+  Mongo) and flips the record to `Accepted` with `processedAt`/`creditedAt`.
+- **Verified locally (`scratch/recharge_admin_flow_test.mjs`):** submit ₹500 →
+  `Pending`, balance unchanged · admin login · recharge visible in the admin
+  list · Accept → "accepted and credited" · balance 1230 → **1730** ✅
+- (Azure verification of the same flow pending redeploy.)
+
 ### Recharge "paisa wallet mein nahi aata" + "token expired" toast (fixed, commit 5000735)
 - **Symptom:** user submitted a UPI recharge; money never appeared in the wallet and
   the "token has expired please login again" toast kept showing.
