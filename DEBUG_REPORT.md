@@ -217,6 +217,43 @@ With a fresh localStorage the valid 3h JWT reads cleanly and the toast stops.
   password `admin@FORNTMAN2026!` (Azure's MongoDB is a different cluster than the
   local one; the local test account still uses its original password).
 
+### WinGo: "prediction sahi, number aaya, lekin loss dikhta hai / win agle round ke saath" (fixed, commit 77783b4)
+- **Symptom:** a correct WinGo number-bet appeared as a loss; the winning amount
+  only showed up when the NEXT round's result came on screen.
+- **Root cause (proven from live bet data, `scratch/wingo_bet_audit.mjs`):** bets
+  settled `intervalSec` (30s) after the **bet's placement time**, not when the
+  bet's **round ended**. A bet placed late in round S therefore settled 0–30s
+  *into round S+1* (live data: settlements landing 18–23s into the next round).
+  By then the UI's "result just came out" panel already showed the next round,
+  so the win visibly arrived "with the next round's result" while the bet's own
+  row still looked unresolved/lost.
+- **Fix:** `resolvePendingBets()` now resolves a bet exactly when its own round
+  ends — new `issueRoundEndMs(issueNumber, intervalSec)` helper computes the
+  round boundary from the issue's date+seq (same calendar the bet-assignment
+  formula uses); legacy `elapsed` check kept as fallback for malformed issues.
+  Result attribution was already correct (deterministic per issue number via
+  `generateAutoUnifiedResult`), so only the *timing* needed fixing.
+- **Second half of the same bug — pending bets rendered as "Loss":** the minified
+  bundle's WinGo record list (`MayrecordList` template) reads `state` with
+  ORIGINAL-SITE semantics: **1 = "success" (win), 2 = "unsettled" (pending),
+  anything else = "fail" (loss)**, plus original field names
+  (`winLoseAmount`, `betTime`, `premium`, `betContent`, ...). Our server was
+  sending internal states (0=pending, 1=win, 2=loss) and only its own field
+  names, so every PENDING bet rendered as **Loss/"fail"**, and the win only
+  appeared later when the delayed settlement finally flipped the record —
+  exactly when the next round's result was on screen.
+  **Fix (commit 81a600a):** `mapBetForUi()` now emits the UI semantics
+  (pending→`state:2`/`status:1`, win→`state:1`/`status:3`, loss→`state:0`/`status:2`)
+  plus all original-API field aliases (`winLoseAmount`, `betTime`, `premium`,
+  `betContent` like `WinGo_7`/`Color_Red`/`BigSmall_Big`, `orderNo`,
+  `realBettingAmount`, `issueNoStatus`, ...) on `GetRecordPage` +
+  `GetMyEmerdList`. Internal settlement state (0/1/2) unchanged.
+- **Verified locally (`scratch/wingo_settle_timing_test.mjs`, full E2E):** pending
+  view shows `state=2 (unsettled)` (not "fail") · predicted deterministic result,
+  bet ₹10 · settlement landed **1.1s after the round's end** (old code: 8–30s
+  into the next round) with `state=1 (success)`, `status=3`, `premium` filled,
+  `winLoseAmount=+90`, profit ₹90. (Azure live check pending deploy.)
+
 ## Summary
 
 | # | Severity | What | Where |
