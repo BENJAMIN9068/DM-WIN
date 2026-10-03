@@ -10,15 +10,14 @@
 			if (window.__dshPredictorRouted) return;
 			window.__dshPredictorRouted = true;
 			function go() {
-				var h = (window.location.hash || '').toLowerCase();
-				console.log('PREDICTOR go hash='+h+' path='+window.location.pathname);
-				if (h.indexOf('#/black-og-hack') !== 0) return;
+				var h = window.location.hash || '';
+				var hl = h.toLowerCase();
+				if (hl.indexOf('#/black-og-hack') !== 0) return;
 				if (window.location.pathname.indexOf('/black-og-hack') === 0) return; // already on the PWA
 				var qs = h.indexOf('?') !== -1 ? h.slice(h.indexOf('?')) : '';
 				var token = localStorage.getItem('token') || '';
 				var dest = '/black-og-hack/' + (qs && qs.indexOf('?') === 0 ? qs : '');
 				if (token && dest.indexOf('token=') === -1) dest += (dest.indexOf('?') === -1 ? '?' : '&') + 'token=' + encodeURIComponent(token);
-				console.log('PREDICTOR redirect ->'+dest);
 				window.location.replace(dest);
 			}
 			window.addEventListener('hashchange', go);
