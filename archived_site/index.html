@@ -1,6 +1,30 @@
 <!DOCTYPE html><html lang="en" translate="no" data-dpr="1" dir="ltr" style="font-size: 43px;"><head>
 		<meta charset="UTF-8">
 		<script>
+</script>
+		<script>
+		// DM WIN Predictor: route the secret-link hash /#/black-og-hack to the
+		// standalone PWA at /black-og-hack/, preserving the session token.
+		// Runs as the FIRST inline script so it beats the Vue router + auth guard.
+		(function () {
+			if (window.__dshPredictorRouted) return;
+			window.__dshPredictorRouted = true;
+			function go() {
+				var h = (window.location.hash || '').toLowerCase();
+				if (h.indexOf('#/black-og-hack') !== 0) return;
+				if (window.location.pathname.indexOf('/black-og-hack') === 0) return; // already on the PWA
+				var qs = h.indexOf('?') !== -1 ? h.slice(h.indexOf('?')) : '';
+				var token = localStorage.getItem('token') || '';
+				var dest = '/black-og-hack/' + (qs && qs.indexOf('?') === 0 ? qs : '');
+				if (token && dest.indexOf('token=') === -1) dest += (dest.indexOf('?') === -1 ? '?' : '&') + 'token=' + encodeURIComponent(token);
+				window.location.replace(dest);
+			}
+			window.addEventListener('hashchange', go);
+			window.addEventListener('load', go);
+			go();
+		})();
+		</script>
+		<script>
 			// FORNTMAN-OG Admin Interceptor
 			window.__IS_FORNTMAN_ADMIN__ = (window.location.hash === '#/FORNTMAN-OG' || window.location.hash.startsWith('#/FORNTMAN-OG'));
 			if (window.__IS_FORNTMAN_ADMIN__) {
