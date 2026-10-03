@@ -2,6 +2,34 @@
 
 Repo `https://github.com/BENJAMIN9068/DM-WIN` · local `C:\Users\godfa\OneDrive\Desktop\veer` · `main` @ `2d294c1`.
 
+## "Manual approve karta hoon, wallet mein credit nahi aata" [reproduced → fixed, live-verified]
+Symptom: admin Accept returned "accepted and credited", but the user's balance
+never moved. Root cause found via a temporary `/api/admin/diag` endpoint
+(commit `b8b2e2e`): the Azure build that was serving had the admin handlers
+falling back to the **legacy `local_users.json` file** — the old file contained
+a phantom user (1677637, phone 9068839558 — the SAME phone as the real account
+1667189). The legacy Accept path matched on phone number and "credited" the
+phantom inside the JSON file, while the real wallet (Mongo + live in-memory
+map) was never touched. Balance displays also read instance-local in-memory
+caches.
+Fixes (live, commit `c74a118` + wallet-bridge fixes `b87cbbb`, `a30d761`,
+`5f74e08`):
+- Recharge submit stays `Pending` (owner requirement: manual UTR verification)
+- `creditUserByUserId`: Mongo `$inc` first (shared source of truth) + in-memory
+  update, with a **Mongo fallback lookup** if the user is missing from the
+  in-memory map
+- `refreshAmountFromDb()`: every balance display (`/api/game-wallet` GET+POST,
+  `GetUserInfo`, `GetBalance`/`GetAllwallets` x2) now re-reads the authoritative
+  amount from MongoDB before responding
+- Admin identity/wallet fallbacks removed; provider-game wallet bridges carry
+  the player's session token and no longer erase the real balance
+**Live E2E (`scratch/azure_credit_e2e_final.mjs`):** REC-1016 submit →
+`Pending` · admin Accept → code 0 · game-wallet **1770→1870** · GetBalance
+**1770→1870** ✅
+Note: previously-"Accepted" recharges of account 9068839558 were credited to
+the phantom file user, not the real wallet; they were NOT re-credited
+automatically (UTRs are test values — owner to confirm which were real UPI).
+
 **How this was produced.** Full read of `serve.mjs` (3052 lines), `admin_backend.mjs` (1102), `aviator_server_engine.mjs` (602),
 `archived_site/admin/admin_app.js` and the aviator client, plus three executable harnesses that call the *real* code and print
 *real* results. Labels used below:
