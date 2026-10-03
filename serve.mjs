@@ -503,6 +503,19 @@ function evaluateBet(bet, result) {
   return { win, profitAmount, multiplier };
 }
 
+// Exact moment (server clock) at which the round an issue belongs to ENDS.
+// Bets are bound to the server's current round via seq = floor(secondsSinceMidnight / intervalSec) + 1,
+// so round `seq` ends at `seq * intervalSec` seconds after midnight of the issue's own
+// date (the same calendar the assignment formula uses).
+function issueRoundEndMs(issueNumber, intervalSec) {
+  const m = /^(\d{4})(\d{2})(\d{2})(\d+)$/.exec(String(issueNumber || ""));
+  if (!m) return null;
+  const seq = parseInt(m[4], 10);
+  if (!seq || seq < 1) return null;
+  const dayStart = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();
+  return dayStart + seq * Number(intervalSec || 60) * 1000;
+}
+
 async function resolvePendingBets(filterIssues = null) {
   const now = Date.now();
   let resolvedAny = false;
@@ -515,8 +528,15 @@ async function resolvePendingBets(filterIssues = null) {
     const elapsed = now - betTime;
 
     const isQueried = Array.isArray(filterIssues) && filterIssues.map(String).includes(String(bet.issueNumber));
-    // Resolve if explicitly queried, or if the round interval has elapsed.
-    const isReady = elapsed >= Math.max(1000, Number(bet.intervalSec || 60) * 1000);
+    // Resolve when the bet's OWN round has ended — NOT intervalSec after the bet
+    // was placed. A bet placed late in a round would otherwise settle up to a
+    // full interval into the NEXT round, so its win/loss (and wallet credit)
+    // only became visible when the next round's result was already on screen
+    // ("number aaya lekin loss dikha, win agle round ke result ke saath").
+    const roundEndMs = issueRoundEndMs(bet.issueNumber, Number(bet.intervalSec || 60));
+    const isReady = roundEndMs !== null
+      ? now >= roundEndMs
+      : elapsed >= Math.max(1000, Number(bet.intervalSec || 60) * 1000);
 
     if (!isReady) continue;
 
