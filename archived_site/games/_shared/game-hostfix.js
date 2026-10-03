@@ -47,8 +47,13 @@
 
   function readToken() {
     try {
-      return localStorage.getItem('token') || localStorage.getItem('userToken') ||
-             localStorage.getItem('accessToken') || '';
+      var t = localStorage.getItem('token') || localStorage.getItem('userToken') ||
+              localStorage.getItem('accessToken');
+      if (t) return t;
+      // The platform appends its session token to the game URL; accept it when
+      // localStorage is empty so the in-game wallet can still authenticate.
+      var q = new URLSearchParams(location.search);
+      return q.get('token') || q.get('auth_token') || q.get('authToken') || '';
     } catch (e) { return ''; }
   }
 
